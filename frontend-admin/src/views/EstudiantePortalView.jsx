@@ -15,6 +15,7 @@ export const EstudiantePortalView = () => {
   const [clasesHoy, setClasesHoy] = useState([]);
   const [todasLasClases, setTodasLasClases] = useState([]);
   const [asistenciasHistorial, setAsistenciasHistorial] = useState([]);
+  const [sesionesActivasEstudiante, setSesionesActivasEstudiante] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('hoy'); // 'hoy', 'materias', 'historial'
 
@@ -41,9 +42,10 @@ export const EstudiantePortalView = () => {
 
       // 2. Materias inscritas
       const resMaterias = await academicoApi.getMateriasInscritas(registroEstudiante);
-      setMateriasInscritas(resMaterias.data || []);
+      const materiasData = resMaterias.data || [];
+      setMateriasInscritas(materiasData);
 
-      // 3. Clases de hoy
+      // 3. Clases de hoy segun horario regular
       const resHoy = await academicoApi.getClasesHoy(registroEstudiante);
       setClasesHoy(resHoy.data || []);
 
@@ -53,7 +55,29 @@ export const EstudiantePortalView = () => {
 
       // 5. Historial de asistencias
       const resAsist = await asistenciaApi.getAsistenciasByEstudiante(registroEstudiante);
-      setAsistenciasHistorial(resAsist.data || []);
+      const asistenciasData = resAsist.data || [];
+      setAsistenciasHistorial(asistenciasData);
+
+      // 6. Sesiones activas en tiempo real
+      try {
+        const resActivas = await asistenciaApi.getSesionesActivas();
+        const activasEst = (resActivas.data || []).map(s => {
+          const mat = materiasData.find(m => m.grupoId === s.idGrupoReferencia);
+          if (!mat) return null;
+          const yaMarco = asistenciasData.some(a => a.idSesion === s.id);
+          return {
+            ...s,
+            materiaSigla: mat.materiaSigla,
+            materiaNombre: mat.materiaNombre,
+            docenteNombreCompleto: mat.docenteNombreCompleto,
+            grupoNombre: mat.grupoNombre,
+            yaMarco
+          };
+        }).filter(Boolean);
+        setSesionesActivasEstudiante(activasEst);
+      } catch (err) {
+        console.warn('No se pudieron consultar sesiones activas', err);
+      }
     } catch (e) {
       console.error('Error cargando datos del estudiante', e);
     } finally {
@@ -101,6 +125,7 @@ export const EstudiantePortalView = () => {
   };
 
   const prioridad = calcularClasePrioritaria();
+  const sesionActiva = sesionesActivasEstudiante.length > 0 ? sesionesActivasEstudiante[0] : null;
 
   const handleMarcarQrSubmit = async (e) => {
     e.preventDefault();
@@ -214,8 +239,63 @@ export const EstudiantePortalView = () => {
         </div>
       </div>
 
-      {/* 2. Tarjeta Atajo Inteligente para la Clase Actual / Siguiente */}
-      {prioridad && prioridad.clase && (
+      {/* 2. Tarjeta Atajo Inteligente para Sesion en Vivo / Clase Actual */}
+      {sesionActiva ? (
+        <div className="card" style={{
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(59, 130, 246, 0.08) 100%)',
+          border: '2px solid var(--color-success)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span className="badge badge-activa" style={{ background: 'var(--color-success)', color: '#fff' }}>
+                  CLASE EN VIVO - SESION ACTIVA
+                </span>
+                {sesionActiva.horaInicio && (
+                  <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Clock size={14} />
+                    {sesionActiva.horaInicio} - {sesionActiva.horaFin}
+                  </span>
+                )}
+              </div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                {sesionActiva.materiaSigla} - {sesionActiva.materiaNombre}
+              </h3>
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginTop: '4px' }}>
+                Docente: <strong>{sesionActiva.docenteNombreCompleto}</strong> &bull; Grupo: {sesionActiva.grupoNombre}
+              </p>
+              <div style={{ marginTop: '6px' }}>
+                <span style={{ fontSize: '0.8rem', padding: '3px 8px', background: 'var(--color-badge-bg)', borderRadius: '6px', border: '1px solid var(--color-border)', color: 'var(--color-primary)' }}>
+                  Tema: <strong>{sesionActiva.tema}</strong>
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {sesionActiva.yaMarco ? (
+                <div style={{ padding: '10px 18px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid var(--color-success)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-success)', fontWeight: 700 }}>
+                  <CheckCircle2 size={18} />
+                  <span>Asistencia Registrada: PRESENTE</span>
+                </div>
+              ) : (
+                <button
+                  className="btn btn-primary"
+                  style={{ padding: '12px 24px', fontSize: '0.95rem', background: 'var(--color-success)', borderColor: 'var(--color-success)' }}
+                  onClick={() => {
+                    setCodigoQrInput(sesionActiva.codigoQrGenerado || '');
+                    setShowModalQr(true);
+                  }}
+                >
+                  <QrCode size={18} />
+                  <span>Marcar Asistencia QR Ahora</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : prioridad && prioridad.clase ? (
         <div className="card" style={{
           background: prioridad.tipo === 'EN_CURSO'
             ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%)'
@@ -255,7 +335,7 @@ export const EstudiantePortalView = () => {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* 3. Selector de Pestañas */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid var(--color-border)', paddingBottom: '12px' }}>
@@ -264,7 +344,7 @@ export const EstudiantePortalView = () => {
           onClick={() => setActiveTab('hoy')}
         >
           <Calendar size={16} />
-          <span>Clases de Hoy ({clasesHoy.length})</span>
+          <span>Clases de Hoy ({clasesHoy.length + sesionesActivasEstudiante.length})</span>
         </button>
         <button
           className={`btn ${activeTab === 'materias' ? 'btn-primary' : 'btn-secondary'}`}
@@ -286,13 +366,13 @@ export const EstudiantePortalView = () => {
       {activeTab === 'hoy' && (
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Horario de Clases para el Dia de Hoy</h3>
+            <h3 className="card-title">Horario de Clases y Sesiones en Vivo para Hoy</h3>
             <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
               {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </span>
           </div>
 
-          {clasesHoy.length === 0 ? (
+          {sesionesActivasEstudiante.length === 0 && clasesHoy.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '36px', color: 'var(--color-text-muted)' }}>
               No tienes clases programadas para el dia de hoy segun tu boleta de inscripcion.
             </div>
@@ -301,18 +381,62 @@ export const EstudiantePortalView = () => {
               <table>
                 <thead>
                   <tr>
-                    <th>Horario</th>
+                    <th>Horario / Estado</th>
                     <th>Sigla</th>
                     <th>Materia</th>
                     <th>Grupo</th>
                     <th>Docente</th>
-                    <th>Estado de Clase</th>
+                    <th>Detalle</th>
                     <th>Accion</th>
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Sesiones Activas en Vivo */}
+                  {sesionesActivasEstudiante.map((s, idx) => (
+                    <tr key={`activa-${idx}`} style={{
+                      background: 'rgba(16, 185, 129, 0.08)',
+                      borderLeft: '4px solid var(--color-success)'
+                    }}>
+                      <td>
+                        <span className="badge badge-activa" style={{ background: 'var(--color-success)', color: '#fff' }}>
+                          EN VIVO AHORA
+                        </span>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
+                          {s.horaInicio} - {s.horaFin}
+                        </div>
+                      </td>
+                      <td style={{ fontWeight: 700, color: 'var(--color-success)' }}>{s.materiaSigla}</td>
+                      <td style={{ fontWeight: 600 }}>{s.materiaNombre}</td>
+                      <td>{s.grupoNombre}</td>
+                      <td>{s.docenteNombreCompleto}</td>
+                      <td>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--color-primary)' }}>
+                          Tema: {s.tema}
+                        </span>
+                      </td>
+                      <td>
+                        {s.yaMarco ? (
+                          <span className="badge badge-presente">Presente</span>
+                        ) : (
+                          <button
+                            className="btn btn-sm btn-primary"
+                            style={{ background: 'var(--color-success)', borderColor: 'var(--color-success)' }}
+                            onClick={() => {
+                              setCodigoQrInput(s.codigoQrGenerado || '');
+                              setShowModalQr(true);
+                            }}
+                          >
+                            <QrCode size={14} />
+                            <span>Marcar QR</span>
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+
+                  {/* Clases Regulares de Hoy */}
                   {clasesHoy.map((c, idx) => (
-                    <tr key={idx} style={{
+                    <tr key={`regular-${idx}`} style={{
                       background: c.enCurso ? 'rgba(59, 130, 246, 0.06)' : 'transparent'
                     }}>
                       <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>
@@ -335,10 +459,9 @@ export const EstudiantePortalView = () => {
                         <button
                           className="btn btn-secondary btn-sm"
                           onClick={() => setShowModalQr(true)}
-                          title="Escanear o ingresar codigo QR"
                         >
                           <QrCode size={14} />
-                          <span>Marcar</span>
+                          <span>QR</span>
                         </button>
                       </td>
                     </tr>

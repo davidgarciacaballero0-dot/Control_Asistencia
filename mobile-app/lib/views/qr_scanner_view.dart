@@ -3,17 +3,24 @@ import '../services/api_service.dart';
 import '../models/asistencia_model.dart';
 
 class QrScannerView extends StatefulWidget {
-  const QrScannerView({super.key});
+  final String? codigoQrPredefinido;
+  const QrScannerView({super.key, this.codigoQrPredefinido});
 
   @override
   State<QrScannerView> createState() => _QrScannerViewState();
 }
 
 class _QrScannerViewState extends State<QrScannerView> {
-  final _qrInputController = TextEditingController();
+  late final TextEditingController _qrInputController;
   bool _loading = false;
   AsistenciaModel? _asistenciaConfirmada;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _qrInputController = TextEditingController(text: widget.codigoQrPredefinido ?? '');
+  }
 
   void _enviarCodigoQr(String codigo) async {
     if (codigo.trim().isEmpty) return;

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../models/clase_horario_model.dart';
 import '../models/materia_inscrita_model.dart';
+import '../models/asistencia_model.dart';
 import '../main.dart';
 import 'qr_scanner_view.dart';
 import 'historial_view.dart';
@@ -24,6 +25,8 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
 
   List<ClaseHorarioModel> _clasesHoy = [];
   List<MateriaInscritaModel> _materiasInscritas = [];
+  List<Map<String, dynamic>> _sesionesActivasEstudiante = [];
+  List<AsistenciaModel> _historialAsistencias = [];
   bool _loading = true;
   late TabController _tabController;
 
@@ -51,7 +54,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
     });
 
     try {
-      // Perfil extendido
+      // 1. Perfil extendido
       final perfil = await ApiService.getPerfilEstudiante();
       if (perfil != null) {
         setState(() {
@@ -61,17 +64,52 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
         });
       }
 
-      // Clases de hoy
-      final rawHoy = await ApiService.getClasesHoy();
-      final clases = rawHoy.map((c) => ClaseHorarioModel.fromJson(c)).toList();
-
-      // Materias inscritas
+      // 2. Materias inscritas
       final rawMaterias = await ApiService.getMateriasInscritas();
       final materias = rawMaterias.map((m) => MateriaInscritaModel.fromJson(m)).toList();
 
+      // 3. Clases de hoy segun horario regular
+      final rawHoy = await ApiService.getClasesHoy();
+      final clases = rawHoy.map((c) => ClaseHorarioModel.fromJson(c)).toList();
+
+      // 4. Historial de asistencias registradas
+      final historial = await ApiService.getHistorialAsistencias();
+
+      // 5. Sesiones activas en tiempo real
+      final rawActivas = await ApiService.getSesionesActivas();
+
+      // Cruzar sesiones activas con los grupos donde el estudiante esta inscrito
+      final sesionesEstudiante = <Map<String, dynamic>>[];
+      for (var s in rawActivas) {
+        final grupoId = s['idGrupoReferencia'];
+        final materia = materias.where((m) => m.grupoId == grupoId).firstOrNull;
+
+        if (materia != null) {
+          final sesionId = s['id'];
+          final yaMarco = historial.any((a) => a.sesionId == sesionId);
+          sesionesEstudiante.add({
+            'sesionId': sesionId,
+            'codigoQr': s['codigoQrGenerado'] ?? '',
+            'tema': s['tema'] ?? 'Clase Regular',
+            'fecha': s['fecha'] ?? '',
+            'horaInicio': s['horaInicio'] ?? '',
+            'horaFin': s['horaFin'] ?? '',
+            'expiracionQr': s['expiracionQr'] ?? '',
+            'grupoId': grupoId,
+            'grupoNombre': materia.grupoNombre,
+            'materiaSigla': materia.materiaSigla,
+            'materiaNombre': materia.materiaNombre,
+            'docenteNombreCompleto': materia.docenteNombreCompleto,
+            'yaMarco': yaMarco,
+          });
+        }
+      }
+
       setState(() {
-        _clasesHoy = clases;
         _materiasInscritas = materias;
+        _clasesHoy = clases;
+        _historialAsistencias = historial;
+        _sesionesActivasEstudiante = sesionesEstudiante;
       });
     } catch (e) {
       debugPrint('Error cargando datos del estudiante: $e');
@@ -96,7 +134,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
     }
   }
 
-  ClaseHorarioModel? _obtenerClasePrioritaria() {
+  ClaseHorarioModel? _obtenerClaseProgramadaPrioritaria() {
     if (_clasesHoy.isEmpty) return null;
 
     final now = TimeOfDay.now();
@@ -129,10 +167,17 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
     return _clasesHoy.first;
   }
 
+  void _abrirEscanerQr([String? codigoQrPredefinido]) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => QrScannerView(codigoQrPredefinido: codigoQrPredefinido)),
+    ).then((_) => _cargarDatosEstudiante());
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final clasePrioritaria = _obtenerClasePrioritaria();
+    final sesionActiva = _sesionesActivasEstudiante.isNotEmpty ? _sesionesActivasEstudiante.first : null;
+    final claseProgramada = _obtenerClaseProgramadaPrioritaria();
 
     return Scaffold(
       appBar: AppBar(
@@ -180,13 +225,6 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                         border: Border.all(
                           color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          )
-                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,20 +304,147 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                     ),
                     const SizedBox(height: 16),
 
-                    // 2. Tarjeta Atajo Inteligente para la Clase Actual / Siguiente
-                    if (clasePrioritaria != null)
+                    // 2. Tarjeta Atajo Inteligente para Sesion en Vivo / Clase Actual
+                    if (sesionActiva != null) ...[
                       Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: clasePrioritaria.enCurso
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF10B981), width: 2),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.sensors, color: Colors.white, size: 14),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'CLASE EN VIVO - SESION ACTIVA',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (sesionActiva['horaInicio'] != '')
+                                  Text(
+                                    '${sesionActiva['horaInicio']} - ${sesionActiva['horaFin']}',
+                                    style: TextStyle(
+                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '${sesionActiva['materiaSigla']} - ${sesionActiva['materiaNombre']}',
+                              style: TextStyle(
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Docente: ${sesionActiva['docenteNombreCompleto']} | Grupo ${sesionActiva['grupoNombre']}',
+                              style: TextStyle(
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                              ),
+                              child: Text(
+                                'Tema: ${sesionActiva['tema']}',
+                                style: TextStyle(
+                                  color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            if (sesionActiva['yaMarco'] == true)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981).withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFF10B981)),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.check_circle, color: Color(0xFF10B981), size: 18),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Asistencia Registrada: PRESENTE',
+                                      style: TextStyle(
+                                        color: Color(0xFF10B981),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF10B981),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    elevation: 2,
+                                  ),
+                                  icon: const Icon(Icons.qr_code_scanner, size: 20),
+                                  label: const Text('Marcar Asistencia QR Ahora', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  onPressed: () => _abrirEscanerQr(sesionActiva['codigoQr']),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ] else if (claseProgramada != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: claseProgramada.enCurso
                               ? (isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF))
                               : (isDark ? const Color(0xFF1E293B) : Colors.white),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: clasePrioritaria.enCurso
+                            color: claseProgramada.enCurso
                                 ? const Color(0xFF3B82F6)
                                 : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                            width: clasePrioritaria.enCurso ? 2 : 1,
+                            width: claseProgramada.enCurso ? 2 : 1,
                           ),
                         ),
                         child: Column(
@@ -291,15 +456,15 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: clasePrioritaria.enCurso
+                                    color: claseProgramada.enCurso
                                         ? const Color(0xFF10B981).withOpacity(0.15)
                                         : const Color(0xFFF59E0B).withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
-                                    clasePrioritaria.enCurso ? 'En Curso Ahora' : 'Proxima Clase Hoy',
+                                    claseProgramada.enCurso ? 'En Curso Ahora' : 'Proxima Clase Hoy',
                                     style: TextStyle(
-                                      color: clasePrioritaria.enCurso
+                                      color: claseProgramada.enCurso
                                           ? const Color(0xFF10B981)
                                           : const Color(0xFFF59E0B),
                                       fontWeight: FontWeight.bold,
@@ -308,7 +473,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                                   ),
                                 ),
                                 Text(
-                                  '${clasePrioritaria.horaInicio} - ${clasePrioritaria.horaFin}',
+                                  '${claseProgramada.horaInicio} - ${claseProgramada.horaFin}',
                                   style: TextStyle(
                                     color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                     fontWeight: FontWeight.w600,
@@ -319,7 +484,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              '${clasePrioritaria.materiaSigla} - ${clasePrioritaria.materiaNombre}',
+                              '${claseProgramada.materiaSigla} - ${claseProgramada.materiaNombre}',
                               style: TextStyle(
                                 color: isDark ? Colors.white : const Color(0xFF0F172A),
                                 fontWeight: FontWeight.bold,
@@ -328,7 +493,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Docente: ${clasePrioritaria.docenteNombreCompleto} (Grupo ${clasePrioritaria.grupoNombre})',
+                              'Docente: ${claseProgramada.docenteNombreCompleto} (Grupo ${claseProgramada.grupoNombre})',
                               style: TextStyle(
                                 color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                 fontSize: 12,
@@ -342,23 +507,18 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                                   backgroundColor: const Color(0xFF3B82F6),
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
                                 icon: const Icon(Icons.qr_code_scanner, size: 20),
                                 label: const Text('Escanear QR de Asistencia', style: TextStyle(fontWeight: FontWeight.bold)),
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => const QrScannerView()),
-                                  ).then((_) => _cargarDatosEstudiante());
-                                },
+                                onPressed: () => _abrirEscanerQr(),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
+                    ],
 
                     // 3. Pestañas de Navegacion
                     Container(
@@ -386,61 +546,130 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
 
                     // 4. Vista de Contenido de Pestañas
                     SizedBox(
-                      height: 360,
+                      height: 380,
                       child: TabBarView(
                         controller: _tabController,
                         children: [
-                          // Tab 1: Clases de Hoy
-                          _clasesHoy.isEmpty
+                          // Tab 1: Clases de Hoy y Sesiones Activas
+                          (_sesionesActivasEstudiante.isEmpty && _clasesHoy.isEmpty)
                               ? Center(
-                                  child: Text(
-                                    'No hay clases programadas para hoy',
-                                    style: TextStyle(
-                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                )
-                              : ListView.builder(
-                                  itemCount: _clasesHoy.length,
-                                  itemBuilder: (context, idx) {
-                                    final c = _clasesHoy[idx];
-                                    return Card(
-                                      margin: const EdgeInsets.only(bottom: 10),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      child: ListTile(
-                                        leading: CircleAvatar(
-                                          backgroundColor: c.enCurso
-                                              ? const Color(0xFF10B981).withOpacity(0.2)
-                                              : const Color(0xFF3B82F6).withOpacity(0.15),
-                                          child: Icon(
-                                            Icons.access_time,
-                                            color: c.enCurso ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
-                                            size: 20,
-                                          ),
-                                        ),
-                                        title: Text(
-                                          '${c.materiaSigla} - ${c.materiaNombre}',
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                        ),
-                                        subtitle: Text(
-                                          '${c.horaInicio} - ${c.horaFin} | Doc: ${c.docenteNombreCompleto}',
-                                          style: const TextStyle(fontSize: 12),
-                                        ),
-                                        trailing: ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                            minimumSize: const Size(60, 30),
-                                          ),
-                                          onPressed: () {
-                                            Navigator.of(context).push(
-                                              MaterialPageRoute(builder: (_) => const QrScannerView()),
-                                            ).then((_) => _cargarDatosEstudiante());
-                                          },
-                                          child: const Text('QR', style: TextStyle(fontSize: 11)),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.calendar_today,
+                                        size: 40,
+                                        color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        'No hay clases programadas para hoy',
+                                        style: TextStyle(
+                                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                          fontSize: 14,
                                         ),
                                       ),
-                                    );
-                                  },
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'Cuando un docente inicie una sesion en vivo, aparecera aqui.',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : ListView(
+                                  children: [
+                                    ..._sesionesActivasEstudiante.map((s) {
+                                      return Card(
+                                        margin: const EdgeInsets.only(bottom: 10),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          side: const BorderSide(color: Color(0xFF10B981), width: 1.5),
+                                        ),
+                                        child: ListTile(
+                                          leading: CircleAvatar(
+                                            backgroundColor: const Color(0xFF10B981).withOpacity(0.2),
+                                            child: const Icon(Icons.sensors, color: Color(0xFF10B981), size: 22),
+                                          ),
+                                          title: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  '${s['materiaSigla']} - ${s['materiaNombre']}',
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                                ),
+                                              ),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF10B981),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: const Text(
+                                                  'EN VIVO',
+                                                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          subtitle: Text(
+                                            'Tema: ${s['tema']} | Doc: ${s['docenteNombreCompleto']}',
+                                            style: const TextStyle(fontSize: 12),
+                                          ),
+                                          trailing: s['yaMarco'] == true
+                                              ? const Icon(Icons.check_circle, color: Color(0xFF10B981))
+                                              : ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: const Color(0xFF10B981),
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                    minimumSize: const Size(60, 30),
+                                                  ),
+                                                  onPressed: () => _abrirEscanerQr(s['codigoQr']),
+                                                  child: const Text('QR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                                ),
+                                        ),
+                                      );
+                                    }),
+                                    ..._clasesHoy.map((c) {
+                                      return Card(
+                                        margin: const EdgeInsets.only(bottom: 10),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        child: ListTile(
+                                          leading: CircleAvatar(
+                                            backgroundColor: c.enCurso
+                                                ? const Color(0xFF10B981).withOpacity(0.2)
+                                                : const Color(0xFF3B82F6).withOpacity(0.15),
+                                            child: Icon(
+                                              Icons.access_time,
+                                              color: c.enCurso ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
+                                              size: 20,
+                                            ),
+                                          ),
+                                          title: Text(
+                                            '${c.materiaSigla} - ${c.materiaNombre}',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                          ),
+                                          subtitle: Text(
+                                            '${c.horaInicio} - ${c.horaFin} | Doc: ${c.docenteNombreCompleto}',
+                                            style: const TextStyle(fontSize: 12),
+                                          ),
+                                          trailing: ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              minimumSize: const Size(60, 30),
+                                            ),
+                                            onPressed: () => _abrirEscanerQr(),
+                                            child: const Text('QR', style: TextStyle(fontSize: 11)),
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ],
                                 ),
 
                           // Tab 2: Mis Materias
@@ -507,9 +736,12 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                 ),
                                 const SizedBox(height: 6),
-                                const Text(
-                                  'Consulta todas tus asistencias registradas',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                Text(
+                                  'Total registros: ${_historialAsistencias.length}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                  ),
                                 ),
                                 const SizedBox(height: 16),
                                 ElevatedButton.icon(
@@ -522,7 +754,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                                   onPressed: () {
                                     Navigator.of(context).push(
                                       MaterialPageRoute(builder: (_) => const HistorialView()),
-                                    );
+                                    ).then((_) => _cargarDatosEstudiante());
                                   },
                                 ),
                               ],

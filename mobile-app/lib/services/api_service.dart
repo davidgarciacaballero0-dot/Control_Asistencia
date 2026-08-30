@@ -149,6 +149,18 @@ class ApiService {
     return null;
   }
 
+  // Listar sesiones activas en tiempo real
+  static Future<List<dynamic>> getSesionesActivas() async {
+    final url = Uri.parse('$baseUrl/api/v1/asistencia/sesiones/activas');
+    final headers = await _getHeaders();
+
+    final response = await http.get(url, headers: headers);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return [];
+  }
+
   // Cerrar sesion
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
