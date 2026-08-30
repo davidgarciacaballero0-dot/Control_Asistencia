@@ -4,9 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/usuario_model.dart';
 import '../models/asistencia_model.dart';
 
+import 'package:flutter/foundation.dart';
+
 class ApiService {
-  // Para emulador de Android se usa 10.0.2.2. Para Web/Desktop o dispositivo fisico en red local, ajustar la IP.
-  static const String baseUrl = 'http://10.0.2.2:8080';
+  // Para Flutter Web en Chrome se usa localhost:8080, para emulador Android 10.0.2.2:8080
+  static String get baseUrl => kIsWeb ? 'http://localhost:8080' : 'http://10.0.2.2:8080';
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -44,6 +46,9 @@ class ApiService {
       await prefs.setString('username', usuario.username);
       await prefs.setString('nombreCompleto', usuario.nombreCompleto);
       await prefs.setString('registro', usuario.identificadorReferencia ?? usuario.username);
+      if (usuario.ci != null) {
+        await prefs.setString('ci', usuario.ci!);
+      }
 
       return usuario;
     } else {

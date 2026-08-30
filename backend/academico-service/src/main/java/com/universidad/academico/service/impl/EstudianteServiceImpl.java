@@ -34,6 +34,7 @@ public class EstudianteServiceImpl implements EstudianteService {
                 .apellidos(dto.getApellidos())
                 .nombre(dto.getNombre())
                 .telefono(dto.getTelefono())
+                .ci(dto.getCi())
                 .correo(dto.getCorreo())
                 .carrera(dto.getCarrera())
                 .plan(dto.getPlan())
@@ -52,6 +53,7 @@ public class EstudianteServiceImpl implements EstudianteService {
         existente.setApellidos(dto.getApellidos());
         existente.setNombre(dto.getNombre());
         existente.setTelefono(dto.getTelefono());
+        existente.setCi(dto.getCi());
         existente.setCorreo(dto.getCorreo());
         existente.setCarrera(dto.getCarrera());
         existente.setPlan(dto.getPlan());
@@ -99,6 +101,7 @@ public class EstudianteServiceImpl implements EstudianteService {
                 .apellidos(e.getApellidos())
                 .nombre(e.getNombre())
                 .telefono(e.getTelefono())
+                .ci(e.getCi())
                 .correo(e.getCorreo())
                 .carrera(e.getCarrera())
                 .plan(e.getPlan())

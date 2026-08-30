@@ -13,6 +13,7 @@ export const EstudiantesView = () => {
     registro: '',
     apellidos: '',
     nombre: '',
+    ci: '',
     telefono: '',
     correo: '',
     carrera: 'Ingenieria Informatica',
@@ -41,6 +42,7 @@ export const EstudiantesView = () => {
       registro: '',
       apellidos: '',
       nombre: '',
+      ci: '',
       telefono: '',
       correo: '',
       carrera: 'Ingenieria Informatica',
@@ -84,6 +86,7 @@ export const EstudiantesView = () => {
     e.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
     e.apellidos.toLowerCase().includes(busqueda.toLowerCase()) ||
     e.registro.toLowerCase().includes(busqueda.toLowerCase()) ||
+    (e.ci && e.ci.toLowerCase().includes(busqueda.toLowerCase())) ||
     e.carrera.toLowerCase().includes(busqueda.toLowerCase())
   );
 
@@ -109,7 +112,7 @@ export const EstudiantesView = () => {
             className="form-input"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por nombre, registro, carrera..."
+            placeholder="Buscar por nombre, registro, CI, carrera..."
             style={{ paddingLeft: '36px' }}
           />
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--color-text-muted)' }} />
@@ -120,6 +123,7 @@ export const EstudiantesView = () => {
             <thead>
               <tr>
                 <th>Registro</th>
+                <th>CI</th>
                 <th>Nombre Completo</th>
                 <th>Carrera</th>
                 <th>Plan</th>
@@ -131,7 +135,7 @@ export const EstudiantesView = () => {
             <tbody>
               {estudiantesFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)' }}>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)' }}>
                     No se encontraron estudiantes registrados.
                   </td>
                 </tr>
@@ -139,6 +143,7 @@ export const EstudiantesView = () => {
                 estudiantesFiltrados.map((e) => (
                   <tr key={e.registro}>
                     <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{e.registro}</td>
+                    <td style={{ fontWeight: 500 }}>{e.ci || '-'}</td>
                     <td>{e.nombre} {e.apellidos}</td>
                     <td>{e.carrera}</td>
                     <td>{e.plan}</td>
@@ -180,6 +185,18 @@ export const EstudiantesView = () => {
                   placeholder="ej: 2024005"
                   required
                   disabled={modoEdicion}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Cedula de Identidad (CI)</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={formData.ci || ''}
+                  onChange={(e) => setFormData({ ...formData, ci: e.target.value })}
+                  placeholder="ej: 8901234 SC"
+                  required
                 />
               </div>
 

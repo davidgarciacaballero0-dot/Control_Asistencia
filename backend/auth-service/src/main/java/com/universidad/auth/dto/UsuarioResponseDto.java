@@ -22,6 +22,7 @@ public class UsuarioResponseDto {
     private String username;
     private String nombreCompleto;
     private String email;
+    private String ci;
     private String identificadorReferencia;
     private Boolean activo;
     private List<String> roles;

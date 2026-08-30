@@ -53,6 +53,9 @@ public class Asistencia {
     @Column(name = "registro_estudiante", length = 30, nullable = false)
     private String registroEstudiante;
 
+    @Column(name = "nombre_estudiante", length = 150)
+    private String nombreEstudiante;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_sesion", nullable = false)
     @JsonIgnoreProperties("asistencias")

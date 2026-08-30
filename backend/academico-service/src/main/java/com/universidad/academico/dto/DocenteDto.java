@@ -28,6 +28,7 @@ public class DocenteDto {
     private String nombre;
 
     private String telefono;
+    private String ci;
 
     @NotBlank(message = "El correo electronico es obligatorio")
     @Email(message = "El correo debe ser valido")

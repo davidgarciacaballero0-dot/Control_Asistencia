@@ -13,6 +13,7 @@ export const DocentesView = () => {
     codigo: '',
     apellidos: '',
     nombre: '',
+    ci: '',
     telefono: '',
     correo: ''
   });
@@ -35,7 +36,7 @@ export const DocentesView = () => {
 
   const handleAbrirCrear = () => {
     setModoEdicion(false);
-    setFormData({ codigo: '', apellidos: '', nombre: '', telefono: '', correo: '' });
+    setFormData({ codigo: '', apellidos: '', nombre: '', ci: '', telefono: '', correo: '' });
     setShowModal(true);
   };
 
@@ -73,7 +74,8 @@ export const DocentesView = () => {
   const docentesFiltrados = docentes.filter(d =>
     d.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
     d.apellidos.toLowerCase().includes(busqueda.toLowerCase()) ||
-    d.codigo.toLowerCase().includes(busqueda.toLowerCase())
+    d.codigo.toLowerCase().includes(busqueda.toLowerCase()) ||
+    (d.ci && d.ci.toLowerCase().includes(busqueda.toLowerCase()))
   );
 
   return (
@@ -98,7 +100,7 @@ export const DocentesView = () => {
             className="form-input"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por nombre, apellido o codigo..."
+            placeholder="Buscar por nombre, apellido, CI o codigo..."
             style={{ paddingLeft: '36px' }}
           />
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--color-text-muted)' }} />
@@ -109,6 +111,7 @@ export const DocentesView = () => {
             <thead>
               <tr>
                 <th>Codigo</th>
+                <th>CI</th>
                 <th>Nombre Completo</th>
                 <th>Telefono</th>
                 <th>Correo Electronico</th>
@@ -118,7 +121,7 @@ export const DocentesView = () => {
             <tbody>
               {docentesFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)' }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)' }}>
                     No se encontraron docentes registrados.
                   </td>
                 </tr>
@@ -126,6 +129,7 @@ export const DocentesView = () => {
                 docentesFiltrados.map((d) => (
                   <tr key={d.codigo}>
                     <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{d.codigo}</td>
+                    <td style={{ fontWeight: 500 }}>{d.ci || '-'}</td>
                     <td>{d.nombre} {d.apellidos}</td>
                     <td>{d.telefono || '-'}</td>
                     <td>{d.correo}</td>
@@ -165,6 +169,18 @@ export const DocentesView = () => {
                   placeholder="ej: DOC-103"
                   required
                   disabled={modoEdicion}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Cedula de Identidad (CI)</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={formData.ci || ''}
+                  onChange={(e) => setFormData({ ...formData, ci: e.target.value })}
+                  placeholder="ej: 7891234 LP"
+                  required
                 />
               </div>
 

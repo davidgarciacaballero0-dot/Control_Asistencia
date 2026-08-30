@@ -50,6 +50,7 @@ public class AcademicoDataSeeder implements CommandLineRunner {
                 .apellidos("Mendoza Ramos")
                 .nombre("Roberto")
                 .telefono("70011223")
+                .ci("20000002")
                 .correo("roberto.mendoza@universidad.edu")
                 .build());
 
@@ -58,6 +59,7 @@ public class AcademicoDataSeeder implements CommandLineRunner {
                 .apellidos("Fernandez Silva")
                 .nombre("Claudia")
                 .telefono("70044556")
+                .ci("20000003")
                 .correo("claudia.fernandez@universidad.edu")
                 .build());
 
@@ -80,6 +82,7 @@ public class AcademicoDataSeeder implements CommandLineRunner {
                 .carrera("Ingenieria Informatica")
                 .plan("2020")
                 .telefono("78912345")
+                .ci("30000003")
                 .correo("juan.perez@estudiante.edu")
                 .build());
 
@@ -90,6 +93,7 @@ public class AcademicoDataSeeder implements CommandLineRunner {
                 .carrera("Ingenieria Informatica")
                 .plan("2020")
                 .telefono("78965432")
+                .ci("30000004")
                 .correo("maria.garcia@estudiante.edu")
                 .build());
 
@@ -100,6 +104,7 @@ public class AcademicoDataSeeder implements CommandLineRunner {
                 .carrera("Ingenieria en Sistemas")
                 .plan("2020")
                 .telefono("78998877")
+                .ci("30000005")
                 .correo("carlos.suarez@estudiante.edu")
                 .build());
 

@@ -335,6 +335,7 @@ export const SesionesView = () => {
                     <tr>
                       <th>Hora</th>
                       <th>Registro</th>
+                      <th>Estudiante</th>
                       <th>Metodo</th>
                       <th>Estado</th>
                     </tr>
@@ -344,6 +345,7 @@ export const SesionesView = () => {
                       <tr key={a.id}>
                         <td>{a.horaRegistro}</td>
                         <td style={{ fontWeight: 600 }}>{a.registroEstudiante}</td>
+                        <td style={{ fontWeight: 500 }}>{a.nombreEstudiante || 'Estudiante'}</td>
                         <td>
                           <span className="badge badge-activa">{a.metodoValidacion}</span>
                         </td>

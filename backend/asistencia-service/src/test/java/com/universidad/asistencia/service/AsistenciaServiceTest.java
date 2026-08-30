@@ -5,7 +5,6 @@ import com.universidad.asistencia.client.dto.VerificacionInscripcionResponse;
 import com.universidad.asistencia.domain.Asistencia;
 import com.universidad.asistencia.domain.EstadoAsistencia;
 import com.universidad.asistencia.domain.EstadoSesion;
-import com.universidad.asistencia.domain.MetodoValidacion;
 import com.universidad.asistencia.domain.SesionClase;
 import com.universidad.asistencia.dto.AsistenciaResponseDto;
 import com.universidad.asistencia.dto.MarcarAsistenciaQrDto;

@@ -4,6 +4,7 @@ class UsuarioModel {
   final String username;
   final String nombreCompleto;
   final String email;
+  final String? ci;
   final String? identificadorReferencia;
   final List<String> roles;
 
@@ -13,6 +14,7 @@ class UsuarioModel {
     required this.username,
     required this.nombreCompleto,
     required this.email,
+    this.ci,
     this.identificadorReferencia,
     required this.roles,
   });
@@ -24,6 +26,7 @@ class UsuarioModel {
       username: json['username'] ?? '',
       nombreCompleto: json['nombreCompleto'] ?? '',
       email: json['email'] ?? '',
+      ci: json['ci'],
       identificadorReferencia: json['identificadorReferencia'],
       roles: (json['roles'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
     );
@@ -36,6 +39,7 @@ class UsuarioModel {
       'username': username,
       'nombreCompleto': nombreCompleto,
       'email': email,
+      'ci': ci,
       'identificadorReferencia': identificadorReferencia,
       'roles': roles,
     };

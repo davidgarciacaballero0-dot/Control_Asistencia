@@ -34,6 +34,7 @@ public class DocenteServiceImpl implements DocenteService {
                 .apellidos(dto.getApellidos())
                 .nombre(dto.getNombre())
                 .telefono(dto.getTelefono())
+                .ci(dto.getCi())
                 .correo(dto.getCorreo())
                 .build();
 
@@ -50,6 +51,7 @@ public class DocenteServiceImpl implements DocenteService {
         existente.setApellidos(dto.getApellidos());
         existente.setNombre(dto.getNombre());
         existente.setTelefono(dto.getTelefono());
+        existente.setCi(dto.getCi());
         existente.setCorreo(dto.getCorreo());
 
         Docente actualizado = docenteRepository.save(existente);
@@ -87,6 +89,7 @@ public class DocenteServiceImpl implements DocenteService {
                 .apellidos(d.getApellidos())
                 .nombre(d.getNombre())
                 .telefono(d.getTelefono())
+                .ci(d.getCi())
                 .correo(d.getCorreo())
                 .build();
     }

@@ -48,6 +48,9 @@ public class Usuario {
     @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
 
+    @Column(name = "ci", length = 30)
+    private String ci;
+
     /**
      * Codigo o registro del estudiante/docente asociado para mantener
      * desacoplamiento logico con los demas microservicios.

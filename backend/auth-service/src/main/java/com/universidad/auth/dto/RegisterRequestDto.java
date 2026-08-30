@@ -36,6 +36,8 @@ public class RegisterRequestDto {
     @Email(message = "Debe proporcionar un correo electronico valido")
     private String email;
 
+    private String ci;
+
     private String identificadorReferencia;
 
     private Set<String> roles;

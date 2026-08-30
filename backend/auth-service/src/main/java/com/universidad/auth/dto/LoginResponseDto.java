@@ -23,6 +23,7 @@ public class LoginResponseDto {
     private String username;
     private String nombreCompleto;
     private String email;
+    private String ci;
     private String identificadorReferencia;
     private List<String> roles;
 }

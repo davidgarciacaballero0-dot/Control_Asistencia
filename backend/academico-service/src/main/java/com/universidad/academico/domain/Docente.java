@@ -38,6 +38,9 @@ public class Docente {
     @Column(name = "telefono", length = 20)
     private String telefono;
 
+    @Column(name = "ci", length = 30)
+    private String ci;
+
     @Column(name = "correo", length = 100, nullable = false, unique = true)
     private String correo;
 }

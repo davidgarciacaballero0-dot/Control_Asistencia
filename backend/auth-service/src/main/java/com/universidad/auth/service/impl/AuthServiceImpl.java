@@ -66,6 +66,7 @@ public class AuthServiceImpl implements AuthService {
                 .username(usuario.getUsername())
                 .nombreCompleto(usuario.getNombreCompleto())
                 .email(usuario.getEmail())
+                .ci(usuario.getCi())
                 .identificadorReferencia(usuario.getIdentificadorReferencia())
                 .roles(roles)
                 .build();
@@ -108,6 +109,7 @@ public class AuthServiceImpl implements AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .nombreCompleto(request.getNombreCompleto())
                 .email(request.getEmail())
+                .ci(request.getCi())
                 .identificadorReferencia(request.getIdentificadorReferencia())
                 .activo(true)
                 .roles(rolesAsignados)
@@ -171,6 +173,7 @@ public class AuthServiceImpl implements AuthService {
                 .username(usuario.getUsername())
                 .nombreCompleto(usuario.getNombreCompleto())
                 .email(usuario.getEmail())
+                .ci(usuario.getCi())
                 .identificadorReferencia(usuario.getIdentificadorReferencia())
                 .activo(usuario.getActivo())
                 .roles(roles)

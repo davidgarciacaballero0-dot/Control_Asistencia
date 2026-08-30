@@ -39,6 +39,7 @@ public class DataSeederConfig implements CommandLineRunner {
                 "admin123",
                 "Administrador del Sistema",
                 "admin@universidad.edu",
+                "10000001",
                 null,
                 Set.of(rolAdmin)
         );
@@ -49,6 +50,7 @@ public class DataSeederConfig implements CommandLineRunner {
                 "docente123",
                 "Dr. Roberto Mendoza Ramos",
                 "roberto.mendoza@universidad.edu",
+                "20000002",
                 "DOC-101",
                 Set.of(rolDocente)
         );
@@ -59,6 +61,7 @@ public class DataSeederConfig implements CommandLineRunner {
                 "estudiante123",
                 "Juan Perez Gomez",
                 "juan.perez@estudiante.edu",
+                "30000003",
                 "2024001",
                 Set.of(rolEstudiante)
         );
@@ -68,6 +71,7 @@ public class DataSeederConfig implements CommandLineRunner {
                 "estudiante123",
                 "Maria Garcia Lopez",
                 "maria.garcia@estudiante.edu",
+                "30000004",
                 "2024002",
                 Set.of(rolEstudiante)
         );
@@ -85,6 +89,7 @@ public class DataSeederConfig implements CommandLineRunner {
             String passwordPlano,
             String nombreCompleto,
             String email,
+            String ci,
             String identificadorReferencia,
             Set<Rol> roles
     ) {
@@ -94,6 +99,7 @@ public class DataSeederConfig implements CommandLineRunner {
                     .password(passwordEncoder.encode(passwordPlano))
                     .nombreCompleto(nombreCompleto)
                     .email(email)
+                    .ci(ci)
                     .identificadorReferencia(identificadorReferencia)
                     .activo(true)
                     .roles(roles)
