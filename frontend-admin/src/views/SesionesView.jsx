@@ -54,10 +54,24 @@ export const SesionesView = () => {
 
   const cargarSesiones = async () => {
     try {
-      const res = await asistenciaApi.getSesionesActivas();
-      setSesiones(res.data);
-      if (res.data.length > 0 && !sesionSeleccionada) {
-        setSesionSeleccionada(res.data[0]);
+      const codigoDocente = user?.identificadorReferencia;
+      let res;
+      if (user?.rol === 'ROLE_DOCENTE' && codigoDocente) {
+        res = await asistenciaApi.getSesionesByDocente(codigoDocente);
+      } else {
+        res = await asistenciaApi.getSesionesActivas();
+      }
+
+      const lista = res.data || [];
+      // Ordenar por ID descendente (la mas reciente primero)
+      lista.sort((a, b) => b.id - a.id);
+      setSesiones(lista);
+
+      const activa = lista.find(s => s.estado === 'ACTIVA');
+      if (activa) {
+        setSesionSeleccionada(activa);
+      } else if (lista.length > 0 && !sesionSeleccionada) {
+        setSesionSeleccionada(lista[0]);
       }
     } catch (e) {
       console.error('Error al cargar sesiones', e);
@@ -115,7 +129,7 @@ export const SesionesView = () => {
 
       setShowIniciarModal(false);
       setSesionSeleccionada(res.data);
-      cargarSesiones();
+      await cargarSesiones();
     } catch (err) {
       alert('Error al iniciar sesion: ' + (err.response?.data?.message || err.message));
     } finally {
@@ -125,14 +139,16 @@ export const SesionesView = () => {
 
   const handleFinalizarSesion = async () => {
     if (!sesionSeleccionada) return;
-    if (!confirm('Desea finalizar la sesion de clase? El codigo QR quedara invalidado.')) return;
-
     try {
-      await asistenciaApi.finalizarSesion(sesionSeleccionada.id);
-      cargarSesiones();
-      cargarDetalleSesion(sesionSeleccionada.id);
+      setLoading(true);
+      const res = await asistenciaApi.finalizarSesion(sesionSeleccionada.id);
+      setSesionSeleccionada(res.data);
+      await cargarSesiones();
+      await cargarDetalleSesion(sesionSeleccionada.id);
     } catch (err) {
-      alert('Error al finalizar sesion: ' + err.message);
+      alert('Error al finalizar sesion: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setLoading(false);
     }
   };
 

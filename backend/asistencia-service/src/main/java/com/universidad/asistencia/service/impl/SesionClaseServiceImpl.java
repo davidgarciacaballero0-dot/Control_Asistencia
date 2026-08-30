@@ -30,6 +30,23 @@ public class SesionClaseServiceImpl implements SesionClaseService {
     @Override
     @Transactional
     public SesionClaseDto iniciarSesion(IniciarSesionDto dto) {
+        // Regla de Negocio: Un docente y un grupo academico solo pueden tener 1 sesion ACTIVA a la vez.
+        // Auto-finalizar cualquier sesion previa que hubiera quedado abierta.
+        List<SesionClase> activasPrevias = sesionRepository.findAll().stream()
+                .filter(s -> s.getEstado() == EstadoSesion.ACTIVA &&
+                        (s.getCodigoDocenteReferencia().equalsIgnoreCase(dto.getCodigoDocenteReferencia()) ||
+                         s.getIdGrupoReferencia().equals(dto.getIdGrupoReferencia())))
+                .toList();
+
+        for (SesionClase prev : activasPrevias) {
+            prev.setEstado(EstadoSesion.FINALIZADA);
+            prev.setHoraFin(LocalTime.now());
+            prev.setExpiracionQr(LocalDateTime.now());
+            sesionRepository.save(prev);
+            log.info("Sesion activa previa #{} del docente {} auto-finalizada para garantizar sesion unica",
+                    prev.getId(), prev.getCodigoDocenteReferencia());
+        }
+
         int minutos = (dto.getMinutosValidezQr() != null && dto.getMinutosValidezQr() > 0)
                 ? dto.getMinutosValidezQr()
                 : 15;
@@ -129,6 +146,7 @@ public class SesionClaseServiceImpl implements SesionClaseService {
     public List<SesionClaseDto> listarActivas() {
         return sesionRepository.findAll().stream()
                 .filter(s -> s.getEstado() == EstadoSesion.ACTIVA)
+                .sorted((s1, s2) -> s2.getId().compareTo(s1.getId()))
                 .map(this::mapearADto)
                 .toList();
     }

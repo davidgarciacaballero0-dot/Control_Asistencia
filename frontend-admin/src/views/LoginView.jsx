@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ShieldCheck, Lock, User, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Lock, User, AlertCircle, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const LoginView = () => {
@@ -8,6 +8,16 @@ export const LoginView = () => {
   const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,9 +37,22 @@ export const LoginView = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'radial-gradient(ellipse at top, #1e293b, #0b1120)',
-      padding: '20px'
+      background: 'var(--color-bg)',
+      padding: '20px',
+      position: 'relative'
     }}>
+      {/* Boton flotante de tema en Login */}
+      <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
+        >
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          <span>{theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}</span>
+        </button>
+      </div>
+
       <div className="card" style={{ maxWidth: '420px', width: '100%', padding: '36px' }}>
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div style={{
