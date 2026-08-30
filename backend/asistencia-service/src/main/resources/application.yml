@@ -1,0 +1,24 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: asistencia-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/db_asistencia}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgrespassword}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+# Configuracion de integracion con el microservicio academico via OpenFeign
+servicios:
+  academico:
+    url: ${ACADEMICO_SERVICE_URL:http://localhost:8081}

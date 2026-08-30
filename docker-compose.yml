@@ -1,0 +1,40 @@
+services:
+  # Servidor principal de Base de Datos PostgreSQL
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: postgres_microservicios
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db/01-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    networks:
+      - microservicios-net
+
+  # Administrador web de PostgreSQL (pgAdmin 4)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin_microservicios
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@asistencia.edu
+      PGADMIN_DEFAULT_PASSWORD: adminpassword
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres-db
+    networks:
+      - microservicios-net
+
+networks:
+  microservicios-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

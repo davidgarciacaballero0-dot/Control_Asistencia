@@ -1,0 +1,34 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        # Ruta hacia el Microservicio de Autenticacion
+        - id: auth-service-route
+          uri: ${AUTH_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/auth/**
+
+        # Ruta hacia el Microservicio Academico
+        - id: academico-service-route
+          uri: ${ACADEMICO_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/academico/**
+          filters:
+            - name: AuthenticationFilter
+
+        # Ruta hacia el Microservicio de Asistencia
+        - id: asistencia-service-route
+          uri: ${ASISTENCIA_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/asistencia/**
+          filters:
+            - name: AuthenticationFilter
+
+# Clave secreta compartida para validar tokens en el Gateway
+jwt:
+  secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
