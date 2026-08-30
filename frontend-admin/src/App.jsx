@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
@@ -9,10 +9,18 @@ import { DocentesView } from './views/DocentesView';
 import { EstudiantesView } from './views/EstudiantesView';
 import { MateriasView } from './views/MateriasView';
 import { GruposView } from './views/GruposView';
+import { EstudiantePortalView } from './views/EstudiantePortalView';
 
-const MainLayout = () => {
-  const { isAuthenticated, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+const MainLayout = ({ theme, toggleTheme }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+  const esEstudiante = user?.roles?.includes('ROLE_ESTUDIANTE');
+  const [activeTab, setActiveTab] = useState(esEstudiante ? 'estudiante-portal' : 'dashboard');
+
+  useEffect(() => {
+    if (esEstudiante) {
+      setActiveTab('estudiante-portal');
+    }
+  }, [esEstudiante]);
 
   if (loading) {
     return (
@@ -28,6 +36,8 @@ const MainLayout = () => {
 
   const renderView = () => {
     switch (activeTab) {
+      case 'estudiante-portal':
+        return <EstudiantePortalView />;
       case 'dashboard':
         return <DashboardView setActiveTab={setActiveTab} />;
       case 'sesiones':
@@ -41,16 +51,17 @@ const MainLayout = () => {
       case 'grupos':
         return <GruposView />;
       default:
-        return <DashboardView setActiveTab={setActiveTab} />;
+        return esEstudiante ? <EstudiantePortalView /> : <DashboardView setActiveTab={setActiveTab} />;
     }
   };
 
   const getTitle = () => {
     switch (activeTab) {
+      case 'estudiante-portal': return 'Portal del Estudiante - Clases y Asistencia';
       case 'dashboard': return 'Panel de Control Principal';
       case 'sesiones': return 'Control y Proyeccion de Sesiones QR';
       case 'docentes': return 'Gestion Academica - Docentes';
-      case 'estudiantes': return 'Gestion Academica - Estudiantes';
+      case 'estudiantes': return 'Gestion Academica - Padron de Estudiantes';
       case 'materias': return 'Gestion Academica - Materias';
       case 'grupos': return 'Gestion Academica - Grupos y Horarios';
       default: return 'Sistema de Asistencia';
@@ -61,7 +72,7 @@ const MainLayout = () => {
     <div className="app-container">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="main-content">
-        <Navbar title={getTitle()} />
+        <Navbar title={getTitle()} theme={theme} onToggleTheme={toggleTheme} />
         <main className="content-body">
           {renderView()}
         </main>
@@ -71,9 +82,22 @@ const MainLayout = () => {
 };
 
 export const App = () => {
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('theme') || 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
+
   return (
     <AuthProvider>
-      <MainLayout />
+      <MainLayout theme={theme} toggleTheme={toggleTheme} />
     </AuthProvider>
   );
 };

@@ -46,6 +46,21 @@ public class BoletaInscripcionController {
         return ResponseEntity.ok(boletaService.listarPorEstudiante(registro));
     }
 
+    @GetMapping("/estudiante/{registro}/materias")
+    public ResponseEntity<List<com.universidad.academico.dto.MateriaInscritaDto>> listarMateriasPorEstudiante(@PathVariable String registro) {
+        return ResponseEntity.ok(boletaService.listarMateriasInscritasPorEstudiante(registro));
+    }
+
+    @GetMapping("/estudiante/{registro}/clases-hoy")
+    public ResponseEntity<List<com.universidad.academico.dto.ClaseHorarioDto>> listarClasesDeHoyPorEstudiante(@PathVariable String registro) {
+        return ResponseEntity.ok(boletaService.listarClasesDeHoyPorEstudiante(registro));
+    }
+
+    @GetMapping("/estudiante/{registro}/horarios")
+    public ResponseEntity<List<com.universidad.academico.dto.ClaseHorarioDto>> listarTodasLasClasesPorEstudiante(@PathVariable String registro) {
+        return ResponseEntity.ok(boletaService.listarTodasLasClasesPorEstudiante(registro));
+    }
+
     @GetMapping
     public ResponseEntity<List<BoletaInscripcionDto>> listarTodas() {
         return ResponseEntity.ok(boletaService.listarTodas());

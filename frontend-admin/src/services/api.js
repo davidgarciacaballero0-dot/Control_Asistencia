@@ -82,9 +82,12 @@ export const academicoApi = {
   deleteHorario: (horarioId) => apiClient.delete(`/api/v1/academico/horarios/${horarioId}`),
   getHorariosByGrupo: (grupoId) => apiClient.get(`/api/v1/academico/horarios/grupo/${grupoId}`),
 
-  // Boletas de Inscripcion
+  // Boletas de Inscripcion y Consultas Estudiantiles
   getBoletas: () => apiClient.get('/api/v1/academico/boletas'),
   createBoleta: (data) => apiClient.post('/api/v1/academico/boletas', data),
+  getMateriasInscritas: (registro) => apiClient.get(`/api/v1/academico/boletas/estudiante/${registro}/materias`),
+  getClasesHoy: (registro) => apiClient.get(`/api/v1/academico/boletas/estudiante/${registro}/clases-hoy`),
+  getHorariosEstudiante: (registro) => apiClient.get(`/api/v1/academico/boletas/estudiante/${registro}/horarios`),
   verificarInscripcion: (registroEstudiante, grupoId) =>
     apiClient.get('/api/v1/academico/boletas/verificar', { params: { registroEstudiante, grupoId } }),
 };

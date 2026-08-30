@@ -104,6 +104,51 @@ class ApiService {
     }
   }
 
+  // Listar materias inscritas del estudiante
+  static Future<List<dynamic>> getMateriasInscritas() async {
+    final registro = await getRegistro();
+    if (registro == null) return [];
+
+    final url = Uri.parse('$baseUrl/api/v1/academico/boletas/estudiante/$registro/materias');
+    final headers = await _getHeaders();
+
+    final response = await http.get(url, headers: headers);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return [];
+  }
+
+  // Listar clases de hoy
+  static Future<List<dynamic>> getClasesHoy() async {
+    final registro = await getRegistro();
+    if (registro == null) return [];
+
+    final url = Uri.parse('$baseUrl/api/v1/academico/boletas/estudiante/$registro/clases-hoy');
+    final headers = await _getHeaders();
+
+    final response = await http.get(url, headers: headers);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return [];
+  }
+
+  // Obtener perfil extendido del estudiante
+  static Future<Map<String, dynamic>?> getPerfilEstudiante() async {
+    final registro = await getRegistro();
+    if (registro == null) return null;
+
+    final url = Uri.parse('$baseUrl/api/v1/academico/estudiantes/$registro');
+    final headers = await _getHeaders();
+
+    final response = await http.get(url, headers: headers);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return null;
+  }
+
   // Cerrar sesion
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();

@@ -1,6 +1,8 @@
 package com.universidad.academico.service;
 
 import com.universidad.academico.dto.BoletaInscripcionDto;
+import com.universidad.academico.dto.ClaseHorarioDto;
+import com.universidad.academico.dto.MateriaInscritaDto;
 import com.universidad.academico.dto.VerificacionInscripcionDto;
 
 import java.util.List;
@@ -19,6 +21,21 @@ public interface BoletaInscripcionService {
     List<BoletaInscripcionDto> listarTodas();
 
     void anularInscripcion(Long numero);
+
+    /**
+     * Obtiene el listado de materias y grupos inscritos por el estudiante con sus horarios.
+     */
+    List<MateriaInscritaDto> listarMateriasInscritasPorEstudiante(String registroEstudiante);
+
+    /**
+     * Obtiene las clases programadas para el dia actual (hoy) segun horario de materias inscritas.
+     */
+    List<ClaseHorarioDto> listarClasesDeHoyPorEstudiante(String registroEstudiante);
+
+    /**
+     * Obtiene todas las franjas horarias semanales inscritas por el estudiante.
+     */
+    List<ClaseHorarioDto> listarTodasLasClasesPorEstudiante(String registroEstudiante);
 
     /**
      * Verifica si un estudiante esta registrado e inscrito en un grupo para marcar asistencia.

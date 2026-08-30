@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../main.dart';
 import 'home_view.dart';
 
 class LoginView extends StatefulWidget {
@@ -47,8 +49,25 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0B1120),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+            tooltip: isDark ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro',
+            onPressed: () async {
+              final newMode = isDark ? ThemeMode.light : ThemeMode.dark;
+              themeNotifier.value = newMode;
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('isDarkMode', !isDark);
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -57,30 +76,32 @@ class _LoginViewState extends State<LoginView> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3B82F6).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
+                Center(
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3B82F6).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(Icons.school, size: 40, color: Color(0xFF3B82F6)),
                   ),
-                  child: const Icon(Icons.school, size: 40, color: Color(0xFF3B82F6)),
                 ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'Asistencia Estudiantil',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'Modulo Movil de Marcacion QR',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
+                  style: TextStyle(fontSize: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                 ),
                 const SizedBox(height: 32),
 
@@ -101,20 +122,20 @@ class _LoginViewState extends State<LoginView> {
 
                 TextField(
                   controller: _usernameController,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
                   decoration: InputDecoration(
                     labelText: 'Registro o Usuario',
-                    labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                    prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF64748B)),
+                    labelStyle: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                    prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF3B82F6)),
                     filled: true,
-                    fillColor: const Color(0xFF1E293B),
+                    fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF334155)),
+                      borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF334155)),
+                      borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                     ),
                   ),
                 ),
@@ -123,20 +144,20 @@ class _LoginViewState extends State<LoginView> {
                 TextField(
                   controller: _passwordController,
                   obscureText: true,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
                   decoration: InputDecoration(
                     labelText: 'Contrasena',
-                    labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                    prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF64748B)),
+                    labelStyle: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                    prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF3B82F6)),
                     filled: true,
-                    fillColor: const Color(0xFF1E293B),
+                    fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF334155)),
+                      borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF334155)),
+                      borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                     ),
                   ),
                 ),
@@ -149,7 +170,7 @@ class _LoginViewState extends State<LoginView> {
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 4,
+                    elevation: 3,
                   ),
                   child: _loading
                       ? const SizedBox(

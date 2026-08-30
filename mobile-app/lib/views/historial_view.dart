@@ -44,12 +44,11 @@ class _HistorialViewState extends State<HistorialView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0B1120),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
-        title: const Text('Historial de Asistencias', style: TextStyle(color: Colors.white, fontSize: 18)),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('Historial de Asistencias', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6)))
@@ -58,10 +57,10 @@ class _HistorialViewState extends State<HistorialView> {
                   child: Text(_error!, style: const TextStyle(color: Color(0xFFEF4444))),
                 )
               : _historial.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         'No registra asistencias previas',
-                        style: TextStyle(color: Color(0xFF94A3B8)),
+                        style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                       ),
                     )
                   : ListView.builder(
@@ -75,9 +74,18 @@ class _HistorialViewState extends State<HistorialView> {
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1E293B),
+                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFF334155)),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              )
+                            ],
                           ),
                           child: Row(
                             children: [
@@ -101,12 +109,19 @@ class _HistorialViewState extends State<HistorialView> {
                                   children: [
                                     Text(
                                       'Sesion #${a.sesionId ?? index + 1}',
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                      style: TextStyle(
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       'Fecha: ${a.fechaRegistro} | Hora: ${a.horaRegistro}',
-                                      style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                                      style: TextStyle(
+                                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ],
                                 ),

@@ -1,11 +1,21 @@
 import React from 'react';
-import { Shield, Server } from 'lucide-react';
+import { Server, Sun, Moon } from 'lucide-react';
 
-export const Navbar = ({ title }) => {
+export const Navbar = ({ title, theme, onToggleTheme }) => {
   return (
     <header className="top-bar">
       <h1 className="top-bar-title">{title}</h1>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <button
+          onClick={onToggleTheme}
+          className="btn btn-secondary btn-sm"
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px' }}
+          title={theme === 'light' ? 'Cambiar a Modo Oscuro' : 'Cambiar a Modo Claro'}
+        >
+          {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
+          <span>{theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}</span>
+        </button>
+
         <div style={{
           display: 'flex',
           alignItems: 'center',

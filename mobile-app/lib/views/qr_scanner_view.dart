@@ -42,12 +42,11 @@ class _QrScannerViewState extends State<QrScannerView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0B1120),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
-        title: const Text('Escaneo de Asistencia QR', style: TextStyle(color: Colors.white, fontSize: 18)),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('Escaneo de Asistencia QR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -58,14 +57,21 @@ class _QrScannerViewState extends State<QrScannerView> {
             Container(
               height: 240,
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: const Color(0xFF3B82F6), width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ],
               ),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  const Icon(Icons.qr_code, size: 120, color: Color(0xFF334155)),
+                  Icon(Icons.qr_code, size: 120, color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                   Container(
                     width: 180,
                     height: 180,
@@ -74,11 +80,11 @@ class _QrScannerViewState extends State<QrScannerView> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  const Positioned(
+                  Positioned(
                     bottom: 16,
                     child: Text(
                       'Enfoque el codigo QR mostrado en clase',
-                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                      style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontSize: 12),
                     ),
                   ),
                 ],
@@ -87,9 +93,13 @@ class _QrScannerViewState extends State<QrScannerView> {
             const SizedBox(height: 24),
 
             // Formulario para ingreso / pegado de codigo QR (soporte para emulador)
-            const Text(
+            Text(
               'Ingresar o Pegar Codigo QR (Emulador / Pruebas)',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
             ),
             const SizedBox(height: 10),
 
@@ -98,19 +108,19 @@ class _QrScannerViewState extends State<QrScannerView> {
                 Expanded(
                   child: TextField(
                     controller: _qrInputController,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
                     decoration: InputDecoration(
                       hintText: 'ej: QR-8374829104829182',
-                      hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                      hintStyle: TextStyle(color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
                       filled: true,
-                      fillColor: const Color(0xFF1E293B),
+                      fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFF334155)),
+                        borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFF334155)),
+                        borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                       ),
                     ),
                   ),
@@ -157,15 +167,15 @@ class _QrScannerViewState extends State<QrScannerView> {
                     const SizedBox(height: 12),
                     Text(
                       'Materia: ${_asistenciaConfirmada!.materiaNombre ?? _asistenciaConfirmada!.materiaSigla ?? "-"}',
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
                     ),
                     Text(
                       'Grupo: ${_asistenciaConfirmada!.grupoNombre ?? "-"}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF475569), fontSize: 13),
                     ),
                     Text(
                       'Hora de Registro: ${_asistenciaConfirmada!.horaRegistro}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF475569), fontSize: 13),
                     ),
                     const SizedBox(height: 8),
                     Container(

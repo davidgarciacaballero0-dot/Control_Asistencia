@@ -14,11 +14,14 @@ import { useAuth } from '../context/AuthContext';
 export const Sidebar = ({ activeTab, setActiveTab }) => {
   const { user, logout } = useAuth();
 
+  const esEstudiante = user?.roles?.includes('ROLE_ESTUDIANTE');
+
   const menuItems = [
+    { id: 'estudiante-portal', label: 'Portal Estudiante', icon: GraduationCap },
     { id: 'dashboard', label: 'Panel Principal', icon: LayoutDashboard },
     { id: 'sesiones', label: 'Sesiones y QR', icon: QrCode },
     { id: 'docentes', label: 'Docentes', icon: Users },
-    { id: 'estudiantes', label: 'Estudiantes', icon: GraduationCap },
+    { id: 'estudiantes', label: 'Padron Estudiantes', icon: GraduationCap },
     { id: 'materias', label: 'Materias', icon: BookOpen },
     { id: 'grupos', label: 'Grupos y Horarios', icon: Layers },
   ];
