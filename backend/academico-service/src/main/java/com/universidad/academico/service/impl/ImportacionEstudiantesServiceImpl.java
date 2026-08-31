@@ -59,7 +59,8 @@ public class ImportacionEstudiantesServiceImpl implements ImportacionEstudiantes
             throw new IllegalArgumentException("El archivo proporcionado esta vacio");
         }
 
-        String nombreArchivo = archivo.getOriginalFilename() != null ? archivo.getOriginalFilename().toLowerCase() : "";
+        String originalFilename = archivo.getOriginalFilename();
+        String nombreArchivo = (originalFilename != null) ? originalFilename.toLowerCase() : "";
         List<Map<String, String>> filas;
 
         try {
