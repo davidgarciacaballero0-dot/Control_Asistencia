@@ -51,4 +51,12 @@ public interface AuthService {
      * @return Lista de DTOs de usuarios.
      */
     List<UsuarioResponseDto> listarUsuarios();
+
+    /**
+     * Aprovisiona o actualiza una cuenta de usuario de forma idempotente.
+     *
+     * @param request Datos del usuario a aprovisionar.
+     * @return DTO con la informacion del usuario.
+     */
+    UsuarioResponseDto provisionarUsuario(com.universidad.auth.dto.ProvisionarUsuarioDto request);
 }

@@ -68,4 +68,34 @@ public class GrupoController {
         }
         return ResponseEntity.ok(grupoService.listarTodos());
     }
+
+    private final com.universidad.academico.service.ImportacionEstudiantesService importacionService;
+
+    /**
+     * Endpoint para la carga masiva de estudiantes mediante archivo CSV o Excel (.xlsx).
+     *
+     * @param id ID del grupo academico.
+     * @param archivo Archivo CSV o Excel con la lista oficial.
+     * @return DTO con el resumen de la importacion e inscripcion.
+     */
+    @PostMapping(value = "/{id}/importar-estudiantes", consumes = {"multipart/form-data"})
+    public ResponseEntity<com.universidad.academico.dto.CargaMasivaEstudiantesDto> importarEstudiantes(
+            @PathVariable Long id,
+            @RequestParam("archivo") org.springframework.web.multipart.MultipartFile archivo
+    ) {
+        com.universidad.academico.dto.CargaMasivaEstudiantesDto resultado = importacionService.importarEstudiantesAGrupo(id, archivo);
+        return ResponseEntity.ok(resultado);
+    }
+
+    /**
+     * Endpoint para consultar la lista de estudiantes inscritos en un grupo determinado.
+     *
+     * @param id ID del grupo academico.
+     * @return Lista de EstudianteDto inscritos en el grupo.
+     */
+    @GetMapping("/{id}/estudiantes")
+    public ResponseEntity<List<com.universidad.academico.dto.EstudianteDto>> listarEstudiantesPorGrupo(@PathVariable Long id) {
+        List<com.universidad.academico.dto.EstudianteDto> estudiantes = importacionService.listarEstudiantesPorGrupo(id);
+        return ResponseEntity.ok(estudiantes);
+    }
 }

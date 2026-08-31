@@ -163,6 +163,66 @@ public class AuthServiceImpl implements AuthService {
                 .toList();
     }
 
+    @Override
+    @Transactional
+    public UsuarioResponseDto provisionarUsuario(com.universidad.auth.dto.ProvisionarUsuarioDto request) {
+        // 1. Verificar si el usuario ya existe por username
+        Usuario usuario = usuarioRepository.findByUsername(request.getUsername()).orElse(null);
+
+        if (usuario != null) {
+            // Actualizar datos si es necesario
+            usuario.setNombreCompleto(request.getNombreCompleto());
+            if (request.getEmail() != null && !request.getEmail().isBlank()) {
+                usuario.setEmail(request.getEmail());
+            }
+            if (request.getCi() != null && !request.getCi().isBlank()) {
+                usuario.setCi(request.getCi());
+            }
+            if (request.getIdentificadorReferencia() != null && !request.getIdentificadorReferencia().isBlank()) {
+                usuario.setIdentificadorReferencia(request.getIdentificadorReferencia());
+            }
+            Usuario actualizado = usuarioRepository.save(usuario);
+            return mapearAUsuarioResponseDto(actualizado);
+        }
+
+        // 2. Resolver rol asignado
+        String rolStr = (request.getRol() != null && !request.getRol().isBlank())
+                ? request.getRol().toUpperCase()
+                : "ROLE_ESTUDIANTE";
+
+        RolNombre rolEnum = RolNombre.ROLE_ESTUDIANTE;
+        try {
+            rolEnum = RolNombre.valueOf(rolStr);
+        } catch (IllegalArgumentException ignored) {
+        }
+
+        RolNombre finalRolEnum = rolEnum;
+        Rol rol = rolRepository.findByNombre(finalRolEnum)
+                .orElseGet(() -> rolRepository.save(Rol.builder().nombre(finalRolEnum).build()));
+
+        Set<Rol> roles = new HashSet<>();
+        roles.add(rol);
+
+        // 3. Crear nuevo usuario con contrasena encriptada con BCrypt
+        String emailGenerado = (request.getEmail() != null && !request.getEmail().isBlank())
+                ? request.getEmail()
+                : request.getUsername() + "@universidad.edu";
+
+        Usuario nuevoUsuario = Usuario.builder()
+                .username(request.getUsername())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .email(emailGenerado)
+                .nombreCompleto(request.getNombreCompleto())
+                .ci(request.getCi() != null ? request.getCi() : "")
+                .identificadorReferencia(request.getIdentificadorReferencia() != null ? request.getIdentificadorReferencia() : request.getUsername())
+                .activo(true)
+                .roles(roles)
+                .build();
+
+        Usuario guardado = usuarioRepository.save(nuevoUsuario);
+        return mapearAUsuarioResponseDto(guardado);
+    }
+
     private UsuarioResponseDto mapearAUsuarioResponseDto(Usuario usuario) {
         List<String> roles = usuario.getRoles().stream()
                 .map(r -> r.getNombre().name())

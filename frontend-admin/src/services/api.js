@@ -76,6 +76,12 @@ export const academicoApi = {
   createGrupo: (data) => apiClient.post('/api/v1/academico/grupos', data),
   updateGrupo: (id, data) => apiClient.put(`/api/v1/academico/grupos/${id}`, data),
   deleteGrupo: (id) => apiClient.delete(`/api/v1/academico/grupos/${id}`),
+  importarEstudiantesGrupo: (grupoId, formData) =>
+    apiClient.post(`/api/v1/academico/grupos/${grupoId}/importar-estudiantes`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  getEstudiantesByGrupo: (grupoId) =>
+    apiClient.get(`/api/v1/academico/grupos/${grupoId}/estudiantes`),
 
   // Horarios
   addHorario: (grupoId, data) => apiClient.post(`/api/v1/academico/horarios/grupo/${grupoId}`, data),

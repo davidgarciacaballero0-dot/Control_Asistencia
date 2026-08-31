@@ -104,4 +104,16 @@ public class AuthController {
         List<UsuarioResponseDto> usuarios = authService.listarUsuarios();
         return ResponseEntity.ok(usuarios);
     }
+
+    /**
+     * Endpoint para aprovisionar credenciales de estudiantes u otros actores desde microservicios internos.
+     *
+     * @param request Datos del usuario a aprovisionar.
+     * @return ResponseEntity con el usuario aprovisionado.
+     */
+    @PostMapping("/provisionar")
+    public ResponseEntity<UsuarioResponseDto> provisionarUsuario(@Valid @RequestBody com.universidad.auth.dto.ProvisionarUsuarioDto request) {
+        UsuarioResponseDto response = authService.provisionarUsuario(request);
+        return ResponseEntity.ok(response);
+    }
 }

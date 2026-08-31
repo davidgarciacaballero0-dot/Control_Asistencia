@@ -34,4 +34,13 @@ public interface BoletaInscripcionRepository extends JpaRepository<BoletaInscrip
             @Param("registroEstudiante") String registroEstudiante,
             @Param("grupoId") Long grupoId
     );
+
+    /**
+     * Obtiene la lista de estudiantes unicos inscritos en un grupo determinado.
+     *
+     * @param grupoId ID del grupo.
+     * @return Lista de entidades Estudiante inscritas en el grupo.
+     */
+    @Query("SELECT DISTINCT b.estudiante FROM BoletaInscripcion b JOIN b.grupos g WHERE g.id = :grupoId")
+    List<com.universidad.academico.domain.Estudiante> findEstudiantesByGrupoId(@Param("grupoId") Long grupoId);
 }
