@@ -9,7 +9,13 @@ import {
   AlertTriangle,
   QrCode,
   Smartphone,
-  Eye
+  Eye,
+  Copy,
+  Check,
+  BookOpen,
+  UserCheck,
+  Calendar,
+  Layers
 } from 'lucide-react';
 import { asistenciaApi, academicoApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -18,11 +24,13 @@ export const SesionesView = () => {
   const { user } = useAuth();
   const [sesiones, setSesiones] = useState([]);
   const [grupos, setGrupos] = useState([]);
+  const [todosLosGrupos, setTodosLosGrupos] = useState([]);
   const [sesionSeleccionada, setSesionSeleccionada] = useState(null);
   const [asistencias, setAsistencias] = useState([]);
   const [reporte, setReporte] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showIniciarModal, setShowIniciarModal] = useState(false);
+  const [copiado, setCopiado] = useState(false);
 
   // Form para iniciar sesion
   const [nuevoGrupoId, setNuevoGrupoId] = useState('');
@@ -118,18 +126,20 @@ export const SesionesView = () => {
   const cargarGrupos = async () => {
     try {
       const res = await academicoApi.getGrupos();
-      let listaGrupos = res.data || [];
+      const todos = res.data || [];
+      setTodosLosGrupos(todos);
 
-      // Si el usuario es docente, filtrar UNICAMENTE sus grupos asignados
+      let listaParaIniciar = todos;
+      // Si el usuario es docente, filtrar sus grupos asignados para la creacion
       if (esDocente && codigoDocenteActual) {
-        listaGrupos = listaGrupos.filter(g => g.docenteCodigo === codigoDocenteActual);
+        listaParaIniciar = todos.filter(g => g.docenteCodigo === codigoDocenteActual);
       }
 
-      setGrupos(listaGrupos);
-      if (listaGrupos.length > 0) {
-        setNuevoGrupoId(listaGrupos[0].id);
-        if (listaGrupos[0].horarios?.length > 0) {
-          setNuevoHorarioId(listaGrupos[0].horarios[0].id);
+      setGrupos(listaParaIniciar);
+      if (listaParaIniciar.length > 0) {
+        setNuevoGrupoId(listaParaIniciar[0].id);
+        if (listaParaIniciar[0].horarios?.length > 0) {
+          setNuevoHorarioId(listaParaIniciar[0].horarios[0].id);
         }
       }
     } catch (e) {
@@ -206,6 +216,13 @@ export const SesionesView = () => {
     }
   };
 
+  const handleCopiarQr = () => {
+    if (!sesionSeleccionada?.codigoQrGenerado) return;
+    navigator.clipboard.writeText(sesionSeleccionada.codigoQrGenerado);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  };
+
   // Metodo para probar y simular la marcacion desde la misma UI
   const handleSimularEscaneo = async (e) => {
     e.preventDefault();
@@ -229,13 +246,18 @@ export const SesionesView = () => {
     }
   };
 
+  // Resolucion de los datos academicos asociados a la sesion
+  const grupoAsociado = todosLosGrupos.find(g => Number(g.id) === Number(sesionSeleccionada?.idGrupoReferencia));
+  const horarioAsociado = grupoAsociado?.horarios?.find(h => Number(h.id) === Number(sesionSeleccionada?.idHorarioReferencia)) ||
+    (grupoAsociado?.horarios?.length > 0 ? grupoAsociado.horarios[0] : null);
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '1.4rem' }}>Control de Asistencia en Vivo</h2>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
-            Generacion de Codigo QR y Monitoreo de Asistencia en Tiempo Real
+            Generacion de Codigo QR dinamico y Monitoreo de Asistencia en Tiempo Real
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowIniciarModal(true)}>
@@ -245,21 +267,29 @@ export const SesionesView = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px' }}>
-        {/* Columna Izquierda: Proyector de QR */}
+        {/* Columna Izquierda: Proyector de QR con Informacion Academica Completa */}
         <div>
           {sesionSeleccionada ? (
             <div className="qr-presenter">
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                <span className="badge badge-activa">
-                  Sesion #{sesionSeleccionada.id} - {sesionSeleccionada.estado}
-                </span>
+              {/* Barra superior de badges */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className={`badge ${sesionSeleccionada.estado === 'ACTIVA' ? 'badge-activa' : 'badge-finalizada'}`}>
+                    Sesion #{sesionSeleccionada.id} - {sesionSeleccionada.estado}
+                  </span>
+                  {grupoAsociado?.materiaSigla && (
+                    <span className="badge badge-presente" style={{ fontWeight: 700 }}>
+                      {grupoAsociado.materiaSigla}
+                    </span>
+                  )}
+                </div>
+
                 <span
                   className="timer-badge"
                   style={{
-                    background: qrExpirado ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.15)',
+                    background: qrExpirado ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
                     color: qrExpirado ? '#ef4444' : '#f59e0b',
                     border: qrExpirado ? '1px solid #ef4444' : '1px solid rgba(245, 158, 11, 0.3)',
-                    fontWeight: 'bold',
                     letterSpacing: '0.5px'
                   }}
                 >
@@ -268,18 +298,65 @@ export const SesionesView = () => {
                 </span>
               </div>
 
-              <h3 style={{ marginTop: '16px', fontSize: '1.3rem' }}>{sesionSeleccionada.tema}</h3>
-              <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
-                Grupo Referencia: #{sesionSeleccionada.idGrupoReferencia} | Fecha: {sesionSeleccionada.fecha}
+              {/* Titulo del Tema */}
+              <h3 style={{ marginTop: '16px', fontSize: '1.35rem', color: 'var(--color-text-primary)' }}>
+                {sesionSeleccionada.tema}
+              </h3>
+
+              {/* Ficha de Detalles Academicos Completos */}
+              <div className="qr-academic-card">
+                <div className="qr-academic-grid">
+                  <div className="qr-academic-item">
+                    <span className="label">Materia</span>
+                    <span className="value">
+                      {grupoAsociado ? `${grupoAsociado.materiaSigla} - ${grupoAsociado.materiaNombre}` : 'Materia Universitaria'}
+                    </span>
+                  </div>
+
+                  <div className="qr-academic-item">
+                    <span className="label">Grupo y Cupo</span>
+                    <span className="value">
+                      Grupo {grupoAsociado?.nombre || sesionSeleccionada.idGrupoReferencia} {grupoAsociado?.cupo ? `(${grupoAsociado.cupo} alumnos)` : ''}
+                    </span>
+                  </div>
+
+                  <div className="qr-academic-item">
+                    <span className="label">Docente a Cargo</span>
+                    <span className="value">
+                      {grupoAsociado?.docenteNombreCompleto || sesionSeleccionada.codigoDocenteReferencia}
+                    </span>
+                  </div>
+
+                  <div className="qr-academic-item">
+                    <span className="label">Horario de Clase</span>
+                    <span className="value">
+                      {horarioAsociado ? `${horarioAsociado.dia} ${horarioAsociado.horaInicio} - ${horarioAsociado.horaFin}` : 'Clase en Curso'}
+                    </span>
+                  </div>
+
+                  <div className="qr-academic-item">
+                    <span className="label">Fecha y Apertura</span>
+                    <span className="value">
+                      {sesionSeleccionada.fecha} | {sesionSeleccionada.horaInicio || 'En curso'}
+                    </span>
+                  </div>
+
+                  <div className="qr-academic-item">
+                    <span className="label">Asistentes en Vivo</span>
+                    <span className="value" style={{ color: '#10b981' }}>
+                      {asistencias.length} {grupoAsociado?.cupo ? `/ ${grupoAsociado.cupo} registrados` : 'marcaciones'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* Contenedor del QR proyectable */}
+              {/* Contenedor del Codigo QR de Alto Contraste */}
               <div
                 className="qr-box"
                 style={{
                   position: 'relative',
-                  opacity: qrExpirado ? 0.45 : 1,
-                  filter: qrExpirado ? 'grayscale(80%)' : 'none',
+                  opacity: qrExpirado ? 0.4 : 1,
+                  filter: qrExpirado ? 'grayscale(90%)' : 'none',
                   transition: 'all 0.3s ease'
                 }}
               >
@@ -291,39 +368,53 @@ export const SesionesView = () => {
                     includeMargin={true}
                   />
                 ) : (
-                  <div style={{ width: 220, height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
-                    Sesion Finalizada
+                  <div style={{ width: 220, height: 220, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '8px' }}>
+                    <Square size={32} />
+                    <span style={{ fontWeight: 600 }}>Sesion Finalizada</span>
                   </div>
                 )}
               </div>
 
+              {/* Alerta de QR Expirado */}
               {qrExpirado && sesionSeleccionada.estado === 'ACTIVA' && (
                 <div style={{
-                  padding: '8px 12px',
+                  padding: '10px 14px',
                   borderRadius: 'var(--radius-md)',
                   background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
                   color: '#ef4444',
                   fontSize: '0.85rem',
-                  marginTop: '10px',
-                  textAlign: 'center'
+                  marginTop: '8px',
+                  textAlign: 'center',
+                  fontWeight: 500
                 }}>
-                  El tiempo de validez del codigo QR ha expirado. Presione 'Regenerar QR' para extender la sesion.
+                  El tiempo de validez del codigo QR ha expirado. Presione 'Regenerar QR' para habilitar nuevas marcaciones.
                 </div>
               )}
 
-              <div className="qr-code-text">
-                {sesionSeleccionada.codigoQrGenerado}
-              </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '6px' }}>
-                Escanear desde la aplicacion movil de asistencia
+              {/* Codigo QR en texto con boton de copiado */}
+              <div className="qr-code-pill">
+                <span>{sesionSeleccionada.codigoQrGenerado}</span>
+                <button
+                  onClick={handleCopiarQr}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', display: 'flex', alignItems: 'center' }}
+                  title="Copiar codigo al portapapeles"
+                >
+                  {copiado ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+                </button>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '6px' }}>
+                Enfoque la camara desde la aplicacion movil de asistencia institucional
+              </div>
+
+              {/* Botones de Control de la Sesion */}
+              <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
                 {sesionSeleccionada.estado === 'ACTIVA' && (
                   <>
                     <button className="btn btn-secondary btn-sm" onClick={handleRegenerarQr}>
                       <RefreshCw size={14} />
-                      <span>Regenerar QR</span>
+                      <span>Regenerar QR (+15 min)</span>
                     </button>
                     <button className="btn btn-danger btn-sm" onClick={handleFinalizarSesion}>
                       <Square size={14} />
@@ -352,7 +443,7 @@ export const SesionesView = () => {
               </div>
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginBottom: '14px' }}>
-              Simula la lectura de este QR desde el telefono de un estudiante registrado.
+              Simula la lectura de este QR desde el telefono de un estudiante inscrito.
             </p>
 
             <form onSubmit={handleSimularEscaneo} style={{ display: 'flex', gap: '12px' }}>
@@ -361,7 +452,7 @@ export const SesionesView = () => {
                 className="form-input"
                 value={registroSimulado}
                 onChange={(e) => setRegistroSimulado(e.target.value)}
-                placeholder="Registro (ej: 2024001, 2024002)"
+                placeholder="Registro (ej: 2024001, 2024010)"
                 required
                 style={{ flex: 1 }}
               />
@@ -380,7 +471,7 @@ export const SesionesView = () => {
                 color: 'var(--color-success)',
                 fontSize: '0.85rem'
               }}>
-                <div style={{ fontWeight: 600 }}>Asistencia Confirmada:</div>
+                <div style={{ fontWeight: 600 }}>Asistencia Confirmada Exitosamente:</div>
                 <div>Estudiante: {resultadoSimulacion.nombreEstudiante} ({resultadoSimulacion.registroEstudiante})</div>
                 <div>Estado: <strong>{resultadoSimulacion.estadoAsistencia}</strong> | Hora: {resultadoSimulacion.horaRegistro}</div>
               </div>
