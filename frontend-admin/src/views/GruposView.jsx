@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Layers, Clock } from 'lucide-react';
+import { Plus, Trash2, Edit2, Layers, Clock, Users, BookOpen } from 'lucide-react';
 import { academicoApi } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export const GruposView = () => {
+  const { user } = useAuth();
+  const esDocente = user?.roles?.includes('ROLE_DOCENTE') || user?.rol === 'ROLE_DOCENTE';
+  const codigoDocenteActual = user?.identificadorReferencia;
+
   const [grupos, setGrupos] = useState([]);
   const [materias, setMaterias] = useState([]);
   const [docentes, setDocentes] = useState([]);
@@ -28,7 +33,7 @@ export const GruposView = () => {
 
   useEffect(() => {
     cargarDatos();
-  }, []);
+  }, [user]);
 
   const cargarDatos = async () => {
     setLoading(true);
@@ -38,11 +43,17 @@ export const GruposView = () => {
         academicoApi.getMaterias(),
         academicoApi.getDocentes()
       ]);
-      setGrupos(resGrupos.data);
-      setMaterias(resMat.data);
-      setDocentes(resDoc.data);
 
-      if (resMat.data.length > 0 && resDoc.data.length > 0) {
+      let listaGrupos = resGrupos.data || [];
+      if (esDocente && codigoDocenteActual) {
+        listaGrupos = listaGrupos.filter(g => g.docenteCodigo === codigoDocenteActual);
+      }
+
+      setGrupos(listaGrupos);
+      setMaterias(resMat.data || []);
+      setDocentes(resDoc.data || []);
+
+      if (resMat.data?.length > 0 && resDoc.data?.length > 0) {
         setFormData({
           nombre: 'SC',
           cupo: 40,
@@ -108,77 +119,99 @@ export const GruposView = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h2 style={{ fontSize: '1.4rem' }}>Gestion de Grupos y Horarios (CU05)</h2>
+          <h2 style={{ fontSize: '1.4rem' }}>
+            {esDocente ? 'Mis Grupos y Horarios Asignados' : 'Gestion de Grupos y Horarios (CU05)'}
+          </h2>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
-            Asignacion de cupos, docentes y franjas horarias
+            {esDocente
+              ? `Materias, grupos y horarios bajo mi responsabilidad docente (${user?.nombreCompleto || user?.username})`
+              : 'Asignacion de cupos, docentes y franjas horarias por la administracion academica'}
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          <Plus size={16} />
-          <span>Nuevo Grupo</span>
-        </button>
+        {!esDocente && (
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <Plus size={16} />
+            <span>Nuevo Grupo</span>
+          </button>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
-        {grupos.map((g) => (
-          <div key={g.id} className="card" style={{ marginBottom: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-              <div>
-                <span className="badge badge-activa" style={{ marginBottom: '6px' }}>{g.materiaSigla}</span>
-                <h3 style={{ fontSize: '1.15rem' }}>{g.materiaNombre}</h3>
-                <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
-                  Grupo: <strong>{g.nombre}</strong> | Cupo: {g.cupo} estudiantes
-                </div>
-              </div>
-              <button className="btn btn-danger btn-sm" onClick={() => handleEliminarGrupo(g.id)} style={{ padding: '6px 8px' }}>
-                <Trash2 size={14} />
-              </button>
-            </div>
-
-            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '12px', marginTop: '12px' }}>
-              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Docente Asignado:</div>
-              <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>{g.docenteNombreCompleto} ({g.docenteCodigo})</div>
-            </div>
-
-            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '12px', marginTop: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Horarios de Clase:</span>
-                <button className="btn btn-secondary btn-sm" onClick={() => handleAbrirHorarioModal(g)} style={{ padding: '4px 8px', fontSize: '0.75rem' }}>
-                  + Horario
-                </button>
-              </div>
-
-              {g.horarios?.length === 0 ? (
-                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Sin horarios asignados.</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {g.horarios?.map((h) => (
-                    <div key={h.id} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      padding: '6px 10px',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.8rem'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Clock size={12} color="#3b82f6" />
-                        <span><strong>{h.dia}:</strong> {h.horaInicio} - {h.horaFin}</span>
-                      </div>
-                      <button
-                        onClick={() => handleEliminarHorario(h.id)}
-                        style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer' }}
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+        {grupos.length === 0 ? (
+          <div className="card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}>
+            <Layers size={40} style={{ color: 'var(--color-text-muted)', margin: '0 auto 12px' }} />
+            <h3>No hay grupos registrados</h3>
+            <p style={{ color: 'var(--color-text-secondary)', marginTop: '6px' }}>
+              {esDocente ? 'No tiene grupos academicos asignados en este periodo.' : 'Cree un nuevo grupo para asignar materias y docentes.'}
+            </p>
           </div>
-        ))}
+        ) : (
+          grupos.map((g) => (
+            <div key={g.id} className="card" style={{ marginBottom: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                <div>
+                  <span className="badge badge-activa" style={{ marginBottom: '6px' }}>{g.materiaSigla}</span>
+                  <h3 style={{ fontSize: '1.15rem' }}>{g.materiaNombre}</h3>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                    Grupo: <strong>{g.nombre}</strong> | Cupo: {g.cupo} estudiantes
+                  </div>
+                </div>
+                {!esDocente && (
+                  <button className="btn btn-danger btn-sm" onClick={() => handleEliminarGrupo(g.id)} style={{ padding: '6px 8px' }}>
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '12px', marginTop: '12px' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Docente Asignado:</div>
+                <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>{g.docenteNombreCompleto} ({g.docenteCodigo})</div>
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '12px', marginTop: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Horarios de Clase:</span>
+                  {!esDocente && (
+                    <button className="btn btn-secondary btn-sm" onClick={() => handleAbrirHorarioModal(g)} style={{ padding: '4px 8px', fontSize: '0.75rem' }}>
+                      + Horario
+                    </button>
+                  )}
+                </div>
+
+                {g.horarios?.length === 0 ? (
+                  <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Sin horarios asignados.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {g.horarios?.map((h) => (
+                      <div key={h.id} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        background: 'rgba(255, 255, 255, 0.02)',
+                        padding: '6px 10px',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.8rem'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Clock size={12} color="#3b82f6" />
+                          <span><strong>{h.dia}:</strong> {h.horaInicio} - {h.horaFin}</span>
+                        </div>
+                        {!esDocente && (
+                          <button
+                            onClick={() => handleEliminarHorario(h.id)}
+                            style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer' }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Modal Crear Grupo */}

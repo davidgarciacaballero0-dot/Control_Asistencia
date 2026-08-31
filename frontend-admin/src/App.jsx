@@ -14,13 +14,19 @@ import { EstudiantePortalView } from './views/EstudiantePortalView';
 const MainLayout = ({ theme, toggleTheme }) => {
   const { isAuthenticated, loading, user } = useAuth();
   const esEstudiante = user?.roles?.includes('ROLE_ESTUDIANTE');
-  const [activeTab, setActiveTab] = useState(esEstudiante ? 'estudiante-portal' : 'dashboard');
+  const esDocente = user?.roles?.includes('ROLE_DOCENTE');
+  
+  const getTabInicial = () => {
+    if (esEstudiante) return 'estudiante-portal';
+    if (esDocente) return 'sesiones';
+    return 'dashboard';
+  };
+
+  const [activeTab, setActiveTab] = useState(getTabInicial);
 
   useEffect(() => {
-    if (esEstudiante) {
-      setActiveTab('estudiante-portal');
-    }
-  }, [esEstudiante]);
+    setActiveTab(getTabInicial());
+  }, [user]);
 
   if (loading) {
     return (

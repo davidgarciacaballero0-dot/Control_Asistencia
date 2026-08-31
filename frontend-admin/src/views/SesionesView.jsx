@@ -35,10 +35,48 @@ export const SesionesView = () => {
   const [resultadoSimulacion, setResultadoSimulacion] = useState(null);
   const [errorSimulacion, setErrorSimulacion] = useState('');
 
+  // Contador regresivo en tiempo real para el QR
+  const [tiempoRestante, setTiempoRestante] = useState('');
+  const [qrExpirado, setQrExpirado] = useState(false);
+
+  const esDocente = user?.roles?.includes('ROLE_DOCENTE') || user?.rol === 'ROLE_DOCENTE';
+  const codigoDocenteActual = user?.identificadorReferencia;
+
   useEffect(() => {
     cargarSesiones();
     cargarGrupos();
-  }, []);
+  }, [user]);
+
+  // Contador de segundos en vivo
+  useEffect(() => {
+    if (!sesionSeleccionada || sesionSeleccionada.estado !== 'ACTIVA' || !sesionSeleccionada.expiracionQr) {
+      setTiempoRestante('');
+      setQrExpirado(false);
+      return;
+    }
+
+    const actualizarContador = () => {
+      const ahora = new Date().getTime();
+      const expDate = new Date(sesionSeleccionada.expiracionQr.replace(' ', 'T')).getTime();
+      const diff = expDate - ahora;
+
+      if (diff <= 0) {
+        setTiempoRestante('00:00');
+        setQrExpirado(true);
+      } else {
+        setQrExpirado(false);
+        const minutos = Math.floor(diff / 60000);
+        const segundos = Math.floor((diff % 60000) / 1000);
+        const mStr = minutos < 10 ? `0${minutos}` : `${minutos}`;
+        const sStr = segundos < 10 ? `0${segundos}` : `${segundos}`;
+        setTiempoRestante(`${mStr}:${sStr}`);
+      }
+    };
+
+    actualizarContador();
+    const intervalTimer = setInterval(actualizarContador, 1000);
+    return () => clearInterval(intervalTimer);
+  }, [sesionSeleccionada?.id, sesionSeleccionada?.expiracionQr, sesionSeleccionada?.estado]);
 
   useEffect(() => {
     let interval;
@@ -54,10 +92,9 @@ export const SesionesView = () => {
 
   const cargarSesiones = async () => {
     try {
-      const codigoDocente = user?.identificadorReferencia;
       let res;
-      if (user?.rol === 'ROLE_DOCENTE' && codigoDocente) {
-        res = await asistenciaApi.getSesionesByDocente(codigoDocente);
+      if (esDocente && codigoDocenteActual) {
+        res = await asistenciaApi.getSesionesByDocente(codigoDocenteActual);
       } else {
         res = await asistenciaApi.getSesionesActivas();
       }
@@ -81,11 +118,18 @@ export const SesionesView = () => {
   const cargarGrupos = async () => {
     try {
       const res = await academicoApi.getGrupos();
-      setGrupos(res.data);
-      if (res.data.length > 0) {
-        setNuevoGrupoId(res.data[0].id);
-        if (res.data[0].horarios?.length > 0) {
-          setNuevoHorarioId(res.data[0].horarios[0].id);
+      let listaGrupos = res.data || [];
+
+      // Si el usuario es docente, filtrar UNICAMENTE sus grupos asignados
+      if (esDocente && codigoDocenteActual) {
+        listaGrupos = listaGrupos.filter(g => g.docenteCodigo === codigoDocenteActual);
+      }
+
+      setGrupos(listaGrupos);
+      if (listaGrupos.length > 0) {
+        setNuevoGrupoId(listaGrupos[0].id);
+        if (listaGrupos[0].horarios?.length > 0) {
+          setNuevoHorarioId(listaGrupos[0].horarios[0].id);
         }
       }
     } catch (e) {
@@ -209,9 +253,18 @@ export const SesionesView = () => {
                 <span className="badge badge-activa">
                   Sesion #{sesionSeleccionada.id} - {sesionSeleccionada.estado}
                 </span>
-                <span className="timer-badge">
+                <span
+                  className="timer-badge"
+                  style={{
+                    background: qrExpirado ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.15)',
+                    color: qrExpirado ? '#ef4444' : '#f59e0b',
+                    border: qrExpirado ? '1px solid #ef4444' : '1px solid rgba(245, 158, 11, 0.3)',
+                    fontWeight: 'bold',
+                    letterSpacing: '0.5px'
+                  }}
+                >
                   <Clock size={14} />
-                  <span>Expira: {sesionSeleccionada.expiracionQr?.substring(11, 16) || '15 min'}</span>
+                  <span>{qrExpirado ? 'QR EXPIRADO (00:00)' : `Tiempo Restante: ${tiempoRestante}`}</span>
                 </span>
               </div>
 
@@ -221,7 +274,15 @@ export const SesionesView = () => {
               </div>
 
               {/* Contenedor del QR proyectable */}
-              <div className="qr-box">
+              <div
+                className="qr-box"
+                style={{
+                  position: 'relative',
+                  opacity: qrExpirado ? 0.45 : 1,
+                  filter: qrExpirado ? 'grayscale(80%)' : 'none',
+                  transition: 'all 0.3s ease'
+                }}
+              >
                 {sesionSeleccionada.estado === 'ACTIVA' ? (
                   <QRCodeSVG
                     value={sesionSeleccionada.codigoQrGenerado || 'EMPTY'}
@@ -235,6 +296,20 @@ export const SesionesView = () => {
                   </div>
                 )}
               </div>
+
+              {qrExpirado && sesionSeleccionada.estado === 'ACTIVA' && (
+                <div style={{
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  color: '#ef4444',
+                  fontSize: '0.85rem',
+                  marginTop: '10px',
+                  textAlign: 'center'
+                }}>
+                  El tiempo de validez del codigo QR ha expirado. Presione 'Regenerar QR' para extender la sesion.
+                </div>
+              )}
 
               <div className="qr-code-text">
                 {sesionSeleccionada.codigoQrGenerado}

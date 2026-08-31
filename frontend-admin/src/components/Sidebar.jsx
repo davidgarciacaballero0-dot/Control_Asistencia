@@ -14,17 +14,33 @@ import { useAuth } from '../context/AuthContext';
 export const Sidebar = ({ activeTab, setActiveTab }) => {
   const { user, logout } = useAuth();
 
+  const esAdmin = user?.roles?.includes('ROLE_ADMIN');
+  const esDocente = user?.roles?.includes('ROLE_DOCENTE');
   const esEstudiante = user?.roles?.includes('ROLE_ESTUDIANTE');
 
-  const menuItems = [
-    { id: 'estudiante-portal', label: 'Portal Estudiante', icon: GraduationCap },
-    { id: 'dashboard', label: 'Panel Principal', icon: LayoutDashboard },
-    { id: 'sesiones', label: 'Sesiones y QR', icon: QrCode },
-    { id: 'docentes', label: 'Docentes', icon: Users },
-    { id: 'estudiantes', label: 'Padron Estudiantes', icon: GraduationCap },
-    { id: 'materias', label: 'Materias', icon: BookOpen },
-    { id: 'grupos', label: 'Grupos y Horarios', icon: Layers },
-  ];
+  let menuItems = [];
+
+  if (esDocente) {
+    menuItems = [
+      { id: 'sesiones', label: 'Control de Asistencia QR', icon: QrCode },
+      { id: 'grupos', label: 'Mis Grupos y Horarios', icon: Layers },
+      { id: 'dashboard', label: 'Resumen de Mis Clases', icon: LayoutDashboard },
+    ];
+  } else if (esEstudiante) {
+    menuItems = [
+      { id: 'estudiante-portal', label: 'Portal del Estudiante', icon: GraduationCap },
+    ];
+  } else {
+    // Por defecto / ROLE_ADMIN
+    menuItems = [
+      { id: 'dashboard', label: 'Panel Principal', icon: LayoutDashboard },
+      { id: 'sesiones', label: 'Monitoreo de Sesiones QR', icon: QrCode },
+      { id: 'docentes', label: 'Gestion Docentes', icon: Users },
+      { id: 'estudiantes', label: 'Padron Estudiantes', icon: GraduationCap },
+      { id: 'materias', label: 'Gestion Materias', icon: BookOpen },
+      { id: 'grupos', label: 'Grupos y Horarios', icon: Layers },
+    ];
+  }
 
   return (
     <aside className="sidebar">
