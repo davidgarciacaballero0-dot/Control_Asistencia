@@ -25,6 +25,8 @@ public class CargaMasivaEstudiantesDto {
     private int totalNuevos;
     private int totalActualizados;
     private int totalInscritos;
+    private int totalBajasLogicas;
+    private int totalFotosProcesadas;
     private int totalFallidos;
 
     @Builder.Default

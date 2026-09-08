@@ -181,6 +181,9 @@ public class AuthServiceImpl implements AuthService {
             if (request.getIdentificadorReferencia() != null && !request.getIdentificadorReferencia().isBlank()) {
                 usuario.setIdentificadorReferencia(request.getIdentificadorReferencia());
             }
+            if (request.getPassword() != null && !request.getPassword().isBlank()) {
+                usuario.setPassword(passwordEncoder.encode(request.getPassword()));
+            }
             Usuario actualizado = usuarioRepository.save(usuario);
             return mapearAUsuarioResponseDto(actualizado);
         }

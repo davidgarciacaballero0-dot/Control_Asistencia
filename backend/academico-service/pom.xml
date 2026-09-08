@@ -41,6 +41,13 @@
             <version>5.2.5</version>
         </dependency>
 
+        <!-- Apache PDFBox para procesamiento de PDF y extraccion de imagenes -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.1</version>
+        </dependency>
+
         <!-- Validacion de Bean (Jakarta Validation) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

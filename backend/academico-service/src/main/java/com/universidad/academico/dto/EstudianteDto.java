@@ -39,4 +39,6 @@ public class EstudianteDto {
 
     @NotBlank(message = "El plan de estudios es obligatorio")
     private String plan;
+
+    private String fotoBase64;
 }

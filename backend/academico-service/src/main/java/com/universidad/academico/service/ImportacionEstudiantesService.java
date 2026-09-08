@@ -13,8 +13,20 @@ import java.util.List;
 public interface ImportacionEstudiantesService {
 
     /**
-     * Procesa un archivo CSV o Excel (.xlsx), registra/actualiza a los estudiantes,
-     * los inscribe en el grupo correspondiente y aprovisiona sus credenciales en auth-service.
+     * Procesa un archivo CSV o Excel (.xlsx) y opcionalmente un archivo PDF con fotos,
+     * registra/actualiza a los estudiantes, extrae las fotografias asociandolas a cada perfil,
+     * los inscribe en el grupo correspondiente y realiza sincronizacion con baja logica
+     * para estudiantes que ya no figuran en la lista actualizada.
+     *
+     * @param grupoId ID del grupo academico al que se inscribiran los estudiantes.
+     * @param archivo Archivo principal de datos (CSV o Excel).
+     * @param archivoPdf Archivo opcional PDF con fotografias de los perfiles.
+     * @return DTO con el resumen del procesamiento y sincronizacion.
+     */
+    CargaMasivaEstudiantesDto importarEstudiantesAGrupo(Long grupoId, MultipartFile archivo, MultipartFile archivoPdf);
+
+    /**
+     * Sobrecarga para mantener compatibilidad cuando unicamente se envia el archivo de datos.
      *
      * @param grupoId ID del grupo academico al que se inscribiran los estudiantes.
      * @param archivo Archivo CSV o Excel subido por el docente o administrador.

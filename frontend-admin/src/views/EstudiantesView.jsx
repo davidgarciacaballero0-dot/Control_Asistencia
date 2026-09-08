@@ -122,6 +122,7 @@ export const EstudiantesView = () => {
           <table>
             <thead>
               <tr>
+                <th style={{ width: '50px' }}>Foto</th>
                 <th>Registro</th>
                 <th>CI</th>
                 <th>Nombre Completo</th>
@@ -135,13 +136,43 @@ export const EstudiantesView = () => {
             <tbody>
               {estudiantesFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)' }}>
+                  <td colSpan="9" style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)' }}>
                     No se encontraron estudiantes registrados.
                   </td>
                 </tr>
               ) : (
                 estudiantesFiltrados.map((e) => (
                   <tr key={e.registro}>
+                    <td>
+                      {e.fotoBase64 ? (
+                        <img
+                          src={e.fotoBase64}
+                          alt={e.nombre}
+                          style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: '1px solid rgba(59, 130, 246, 0.4)'
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          background: '#334155',
+                          color: '#94a3b8',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.75rem',
+                          fontWeight: 600
+                        }}>
+                          {e.nombre ? e.nombre.charAt(0).toUpperCase() : 'E'}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{e.registro}</td>
                     <td style={{ fontWeight: 500 }}>{e.ci || '-'}</td>
                     <td>{e.nombre} {e.apellidos}</td>

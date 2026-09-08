@@ -43,4 +43,14 @@ public interface BoletaInscripcionRepository extends JpaRepository<BoletaInscrip
      */
     @Query("SELECT DISTINCT b.estudiante FROM BoletaInscripcion b JOIN b.grupos g WHERE g.id = :grupoId")
     List<com.universidad.academico.domain.Estudiante> findEstudiantesByGrupoId(@Param("grupoId") Long grupoId);
+
+    /**
+     * Obtiene todas las boletas de inscripcion asociadas a un grupo especifico.
+     * Utilizado para la sincronizacion de listas y bajas logicas de estudiantes.
+     *
+     * @param grupoId ID del grupo.
+     * @return Lista de boletas de inscripcion vinculadas al grupo.
+     */
+    @Query("SELECT DISTINCT b FROM BoletaInscripcion b JOIN b.grupos g WHERE g.id = :grupoId")
+    List<BoletaInscripcion> findBoletasByGrupoId(@Param("grupoId") Long grupoId);
 }

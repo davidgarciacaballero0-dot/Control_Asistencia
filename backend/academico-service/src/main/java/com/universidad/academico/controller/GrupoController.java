@@ -72,18 +72,21 @@ public class GrupoController {
     private final com.universidad.academico.service.ImportacionEstudiantesService importacionService;
 
     /**
-     * Endpoint para la carga masiva de estudiantes mediante archivo CSV o Excel (.xlsx).
+     * Endpoint para la carga masiva de estudiantes mediante archivo CSV, Excel o PDF,
+     * con soporte opcional para archivo PDF con fotografias de perfil y sincronizacion con baja logica.
      *
      * @param id ID del grupo academico.
-     * @param archivo Archivo CSV o Excel con la lista oficial.
-     * @return DTO con el resumen de la importacion e inscripcion.
+     * @param archivo Archivo principal de estudiantes (CSV, Excel o PDF).
+     * @param archivoPdf Archivo opcional PDF con fotografias de perfil.
+     * @return DTO con el resumen de la importacion, inscripcion y bajas logicas.
      */
     @PostMapping(value = "/{id}/importar-estudiantes", consumes = {"multipart/form-data"})
     public ResponseEntity<com.universidad.academico.dto.CargaMasivaEstudiantesDto> importarEstudiantes(
             @PathVariable Long id,
-            @RequestParam("archivo") org.springframework.web.multipart.MultipartFile archivo
+            @RequestParam("archivo") org.springframework.web.multipart.MultipartFile archivo,
+            @RequestParam(value = "archivoPdf", required = false) org.springframework.web.multipart.MultipartFile archivoPdf
     ) {
-        com.universidad.academico.dto.CargaMasivaEstudiantesDto resultado = importacionService.importarEstudiantesAGrupo(id, archivo);
+        com.universidad.academico.dto.CargaMasivaEstudiantesDto resultado = importacionService.importarEstudiantesAGrupo(id, archivo, archivoPdf);
         return ResponseEntity.ok(resultado);
     }
 

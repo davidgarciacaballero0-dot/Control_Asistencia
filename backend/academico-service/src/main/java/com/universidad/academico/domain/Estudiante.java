@@ -49,4 +49,11 @@ public class Estudiante {
 
     @Column(name = "plan", length = 20, nullable = false)
     private String plan;
+
+    /**
+     * Fotografia de perfil del estudiante codificada en formato Base64.
+     * Utilizada para la validacion visual de identidad y futuros modulos de reconocimiento facial.
+     */
+    @Column(name = "foto_base64", columnDefinition = "TEXT")
+    private String fotoBase64;
 }

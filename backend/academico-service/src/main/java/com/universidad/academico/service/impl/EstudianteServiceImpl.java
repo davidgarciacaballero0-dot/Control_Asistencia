@@ -38,6 +38,7 @@ public class EstudianteServiceImpl implements EstudianteService {
                 .correo(dto.getCorreo())
                 .carrera(dto.getCarrera())
                 .plan(dto.getPlan())
+                .fotoBase64(dto.getFotoBase64())
                 .build();
 
         Estudiante guardado = estudianteRepository.save(estudiante);
@@ -57,6 +58,9 @@ public class EstudianteServiceImpl implements EstudianteService {
         existente.setCorreo(dto.getCorreo());
         existente.setCarrera(dto.getCarrera());
         existente.setPlan(dto.getPlan());
+        if (dto.getFotoBase64() != null && !dto.getFotoBase64().isBlank()) {
+            existente.setFotoBase64(dto.getFotoBase64());
+        }
 
         Estudiante actualizado = estudianteRepository.save(existente);
         return mapearADto(actualizado);
@@ -105,6 +109,7 @@ public class EstudianteServiceImpl implements EstudianteService {
                 .correo(e.getCorreo())
                 .carrera(e.getCarrera())
                 .plan(e.getPlan())
+                .fotoBase64(e.getFotoBase64())
                 .build();
     }
 }

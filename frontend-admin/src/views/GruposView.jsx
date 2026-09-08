@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Layers, Clock, Users, BookOpen, Upload, Download, Search, CheckCircle, AlertCircle, FileSpreadsheet } from 'lucide-react';
+import { Plus, Trash2, Edit2, Layers, Clock, Users, BookOpen, Upload, Download, Search, CheckCircle, AlertCircle, FileSpreadsheet, Smartphone, Key } from 'lucide-react';
 import { academicoApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -31,10 +31,11 @@ export const GruposView = () => {
     horaFin: '09:15'
   });
 
-  // Modal Importar Estudiantes (CSV / Excel)
+  // Modal Importar Estudiantes (CSV / Excel / PDF)
   const [showImportModal, setShowImportModal] = useState(false);
   const [grupoParaImportar, setGrupoParaImportar] = useState(null);
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
+  const [archivoPdfSeleccionado, setArchivoPdfSeleccionado] = useState(null);
   const [importando, setImportando] = useState(false);
   const [resultadoImportacion, setResultadoImportacion] = useState(null);
   const [errorImportacion, setErrorImportacion] = useState('');
@@ -134,6 +135,7 @@ export const GruposView = () => {
   const handleAbrirImportModal = (grupo) => {
     setGrupoParaImportar(grupo);
     setArchivoSeleccionado(null);
+    setArchivoPdfSeleccionado(null);
     setResultadoImportacion(null);
     setErrorImportacion('');
     setShowImportModal(true);
@@ -165,6 +167,9 @@ export const GruposView = () => {
 
     const data = new FormData();
     data.append('archivo', archivoSeleccionado);
+    if (archivoPdfSeleccionado) {
+      data.append('archivoPdf', archivoPdfSeleccionado);
+    }
 
     try {
       const res = await academicoApi.importarEstudiantesGrupo(grupoParaImportar.id, data);
@@ -341,11 +346,15 @@ export const GruposView = () => {
             <form onSubmit={handleImportarArchivo}>
               <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '14px', borderRadius: 'var(--radius-md)', marginBottom: '18px' }}>
                 <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '6px', color: '#3b82f6' }}>
-                  Estructura del archivo CSV o Excel (.xlsx)
+                  Estructura del archivo CSV, Excel (.xlsx) o PDF
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
                   El archivo debe contener las columnas: <strong>Registro, CI, Apellidos, Nombre, Carrera, Plan, Telefono, Email</strong>.
-                  Al importar, los estudiantes quedaran inscritos en este grupo y sus credenciales de acceso se aprovisionaran automaticamente.
+                  Tambien puedes adjuntar opcionalmente el archivo PDF con las fotografias de perfil. Al reimportar una lista actualizada, los estudiantes que ya no aparezcan seran dados de baja logica de este grupo para evitar que sigan marcando asistencia, preservando su historial.
+                </div>
+                <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: 'var(--radius-sm)', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)', fontSize: '0.78rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Smartphone size={15} />
+                  <span><strong>Aprovisionamiento Automatico:</strong> Al cargar la lista, se crearan automaticamente las cuentas de cada estudiante para usar la app movil (<strong>Usuario:</strong> Registro | <strong>Contrasena:</strong> CI).</span>
                 </div>
                 <button
                   type="button"
@@ -359,14 +368,27 @@ export const GruposView = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Seleccionar Archivo (.CSV, .XLSX, .XLS)</label>
+                <label className="form-label">Archivo Principal de Datos (.CSV, .XLSX, .XLS, .PDF)</label>
                 <input
                   type="file"
                   className="form-input"
-                  accept=".csv,.xlsx,.xls"
+                  accept=".csv,.xlsx,.xls,.pdf"
                   onChange={(e) => setArchivoSeleccionado(e.target.files[0])}
                   required
                 />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Archivo PDF con Fotos de Perfil (Opcional)</label>
+                <input
+                  type="file"
+                  className="form-input"
+                  accept=".pdf"
+                  onChange={(e) => setArchivoPdfSeleccionado(e.target.files[0])}
+                />
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                  Extrae automaticamente las fotografias del PDF y las asocia al perfil de cada estudiante por orden de lista.
+                </span>
               </div>
 
               {errorImportacion && (
@@ -396,13 +418,40 @@ export const GruposView = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', fontWeight: 600, marginBottom: '8px' }}>
                     <CheckCircle size={18} />
-                    <span>Importacion Completada Exitosamente</span>
+                    <span>Importacion y Sincronizacion Completada</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.85rem' }}>
                     <div>Total Procesados: <strong>{resultadoImportacion.totalProcesados}</strong></div>
                     <div>Nuevos Creados: <strong>{resultadoImportacion.totalNuevos}</strong></div>
                     <div>Inscritos al Grupo: <strong>{resultadoImportacion.totalInscritos}</strong></div>
                     <div>Actualizados: <strong>{resultadoImportacion.totalActualizados}</strong></div>
+                    <div style={{ color: '#f59e0b' }}>Bajas Logicas: <strong>{resultadoImportacion.totalBajasLogicas || 0}</strong></div>
+                    <div style={{ color: '#3b82f6' }}>Fotos Asignadas: <strong>{resultadoImportacion.totalFotosProcesadas || 0}</strong></div>
+                  </div>
+
+                  {/* Panel de confirmacion de credenciales moviles creadas */}
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '10px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    fontSize: '0.82rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: '#3b82f6', marginBottom: '4px' }}>
+                      <Smartphone size={15} />
+                      <span>Credenciales para App Movil Generadas con Exito</span>
+                    </div>
+                    <div style={{ color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
+                      Se han creado y habilitado las cuentas de acceso para los <strong>{resultadoImportacion.totalProcesados}</strong> estudiantes:
+                    </div>
+                    <div style={{ marginTop: '6px', fontSize: '0.8rem', background: 'rgba(0,0,0,0.2)', padding: '6px 10px', borderRadius: '4px' }}>
+                      <div>• <strong>Usuario:</strong> Numero de Registro del alumno</div>
+                      <div>• <strong>Contrasena:</strong> Carnet de Identidad (CI) o Iniciales del nombre en mayusculas + Registro (ej: GCD217058795)</div>
+                    </div>
+                    <div style={{ marginTop: '6px', fontSize: '0.78rem', color: '#10b981' }}>
+                      Los estudiantes ya pueden ingresar a la app movil y marcar asistencia escaneando el QR de la sesion.
+                    </div>
                   </div>
                   {resultadoImportacion.errores?.length > 0 && (
                     <div style={{ marginTop: '10px', fontSize: '0.75rem', color: '#ef4444' }}>
@@ -474,22 +523,62 @@ export const GruposView = () => {
                 <table>
                   <thead>
                     <tr>
+                      <th style={{ width: '50px' }}>Foto</th>
                       <th>Registro</th>
                       <th>CI</th>
                       <th>Nombre Completo</th>
                       <th>Carrera</th>
-                      <th>Plan</th>
+                      <th>Acceso App Movil</th>
                       <th>Correo</th>
                     </tr>
                   </thead>
                   <tbody>
                     {estudiantesFiltrados.map((est) => (
                       <tr key={est.registro}>
+                        <td>
+                          {est.fotoBase64 ? (
+                            <img
+                              src={est.fotoBase64}
+                              alt={est.nombre}
+                              style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                border: '1px solid rgba(59, 130, 246, 0.4)'
+                              }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '50%',
+                              background: '#334155',
+                              color: '#94a3b8',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.75rem',
+                              fontWeight: 600
+                            }}>
+                              {est.nombre ? est.nombre.charAt(0).toUpperCase() : 'E'}
+                            </div>
+                          )}
+                        </td>
                         <td style={{ fontWeight: 600, color: '#3b82f6' }}>{est.registro}</td>
                         <td>{est.ci || '-'}</td>
                         <td style={{ fontWeight: 500 }}>{est.nombre} {est.apellidos}</td>
                         <td>{est.carrera}</td>
-                        <td>{est.plan}</td>
+                        <td>
+                          <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '2px' }}>
+                            <span className="badge badge-activa" style={{ fontSize: '0.7rem', width: 'fit-content' }}>
+                              Habilitado
+                            </span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                              Clave: <strong style={{ color: 'var(--color-text-primary)' }}>{est.ci || est.registro}</strong>
+                            </span>
+                          </div>
+                        </td>
                         <td style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{est.correo}</td>
                       </tr>
                     ))}

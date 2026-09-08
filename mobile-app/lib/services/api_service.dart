@@ -7,8 +7,27 @@ import '../models/asistencia_model.dart';
 import 'package:flutter/foundation.dart';
 
 class ApiService {
-  // Para Flutter Web en Chrome se usa localhost:8080, para emulador Android 10.0.2.2:8080
-  static String get baseUrl => kIsWeb ? 'http://localhost:8080' : 'http://10.0.2.2:8080';
+  static String _customBaseUrl = '';
+
+  // Por defecto usa la IP local para conexion desde dispositivos fisicos en la misma red Wi-Fi
+  static String get baseUrl {
+    if (_customBaseUrl.isNotEmpty) return _customBaseUrl;
+    return kIsWeb ? 'http://localhost:8080' : 'http://192.168.100.29:8080';
+  }
+
+  static Future<void> initBaseUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('server_url');
+    if (saved != null && saved.isNotEmpty) {
+      _customBaseUrl = saved;
+    }
+  }
+
+  static Future<void> setBaseUrl(String url) async {
+    _customBaseUrl = url.trim();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('server_url', _customBaseUrl);
+  }
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'services/api_service.dart';
 import 'views/login_view.dart';
 import 'views/home_view.dart';
 
@@ -7,6 +8,7 @@ final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ApiService.initBaseUrl();
   final prefs = await SharedPreferences.getInstance();
   final hasToken = prefs.getString('token') != null;
   final isDark = prefs.getBool('isDarkMode') ?? true;

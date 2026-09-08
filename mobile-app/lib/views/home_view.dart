@@ -319,28 +319,34 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF10B981),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.sensors, color: Colors.white, size: 14),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'CLASE EN VIVO - SESION ACTIVA',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 11,
+                                Flexible(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF10B981),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.sensors, color: Colors.white, size: 14),
+                                        SizedBox(width: 4),
+                                        Flexible(
+                                          child: Text(
+                                            'EN VIVO - SESION ACTIVA',
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
+                                const SizedBox(width: 8),
                                 if (sesionActiva['horaInicio'] != '')
                                   Text(
                                     '${sesionActiva['horaInicio']} - ${sesionActiva['horaFin']}',
@@ -425,7 +431,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                                   ),
                                   icon: const Icon(Icons.qr_code_scanner, size: 20),
                                   label: const Text('Marcar Asistencia QR Ahora', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  onPressed: () => _abrirEscanerQr(sesionActiva['codigoQr']),
+                                  onPressed: () => _abrirEscanerQr(),
                                 ),
                               ),
                           ],
@@ -629,7 +635,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                                     minimumSize: const Size(60, 30),
                                                   ),
-                                                  onPressed: () => _abrirEscanerQr(s['codigoQr']),
+                                                  onPressed: () => _abrirEscanerQr(),
                                                   child: const Text('QR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                                                 ),
                                         ),

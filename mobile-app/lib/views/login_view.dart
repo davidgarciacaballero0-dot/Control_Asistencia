@@ -57,6 +57,55 @@ class _LoginViewState extends State<LoginView> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Configurar Servidor',
+            onPressed: () {
+              final urlController = TextEditingController(text: ApiService.baseUrl);
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Direccion del Servidor'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Ingrese la IP y puerto de su maquina donde corren los microservicios (por ejemplo: http://192.168.100.29:8080 o http://10.0.2.2:8080 para emulador):',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: urlController,
+                        decoration: const InputDecoration(
+                          labelText: 'URL del API Gateway',
+                          hintText: 'http://192.168.100.29:8080',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('Cancelar'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        await ApiService.setBaseUrl(urlController.text.trim());
+                        if (context.mounted) {
+                          Navigator.of(ctx).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Servidor configurado en: ${ApiService.baseUrl}')),
+                          );
+                        }
+                      },
+                      child: const Text('Guardar'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
             tooltip: isDark ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro',
             onPressed: () async {
