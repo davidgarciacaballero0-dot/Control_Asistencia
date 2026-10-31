@@ -69,7 +69,7 @@ class _LoginViewState extends State<LoginView> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
-                        'Ingrese la IP y puerto de su maquina donde corren los microservicios (por ejemplo: http://192.168.100.29:8080 o http://10.0.2.2:8080 para emulador):',
+                        'Ingrese la IP y puerto de su maquina donde corren los microservicios (por ejemplo: http://192.168.243.114:8080 o http://10.0.2.2:8080 para emulador):',
                         style: TextStyle(fontSize: 12),
                       ),
                       const SizedBox(height: 12),
@@ -77,7 +77,7 @@ class _LoginViewState extends State<LoginView> {
                         controller: urlController,
                         decoration: const InputDecoration(
                           labelText: 'URL del API Gateway',
-                          hintText: 'http://192.168.100.29:8080',
+                          hintText: 'http://192.168.243.114:8080',
                           border: OutlineInputBorder(),
                         ),
                       ),

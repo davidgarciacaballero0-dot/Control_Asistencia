@@ -12,7 +12,7 @@ class ApiService {
   // Por defecto usa la IP local para conexion desde dispositivos fisicos en la misma red Wi-Fi
   static String get baseUrl {
     if (_customBaseUrl.isNotEmpty) return _customBaseUrl;
-    return kIsWeb ? 'http://localhost:8080' : 'http://192.168.100.29:8080';
+    return kIsWeb ? 'http://localhost:8080' : 'http://192.168.243.114:8080';
   }
 
   static Future<void> initBaseUrl() async {
