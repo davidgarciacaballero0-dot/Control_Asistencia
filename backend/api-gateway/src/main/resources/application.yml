@@ -6,7 +6,7 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      routes:l
+      routes:
         # Ruta hacia el Microservicio de Autenticacion
         - id: auth-service-route
           uri: ${AUTH_SERVICE_URL:http://localhost:8083}
@@ -27,7 +27,7 @@ spring:
           predicates:
             - Path=/api/v1/asistencia/**
           filters:
-            - name: AuthenticationFilterl
+            - name: AuthenticationFilter
 
 # Clave secreta compartida para validar tokens en el Gateway
 jwt:

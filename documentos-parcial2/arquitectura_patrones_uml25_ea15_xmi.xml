@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.5.1"
+         xmlns:uml="http://www.omg.org/spec/UML/20131001"
+         xmlns:xmi="http://www.omg.org/spec/XMI/20131001">
+  <xmi:Documentation exporter="Enterprise Architect" exporterVersion="15.2"/>
+  <uml:Model xmi:type="uml:Model" name="Control_Asistencia_Microservicios_Patrones_UML25" visibility="public">
+
+    <!-- ========================================================================= -->
+    <!-- PAQUETE 1: CU07 - GESTIONAR ASISTENCIA (PATRON CHAIN OF RESPONSIBILITY)   -->
+    <!-- ========================================================================= -->
+    <packagedElement xmi:type="uml:Package" xmi:id="EAPK_CU07_COR" name="CU07_Gestionar_Asistencia_ChainOfResponsibility" visibility="public">
+
+      <!-- Client: AsistenciaServiceImpl -->
+      <packagedElement xmi:type="uml:Class" xmi:id="EAID_CLS_CLIENT" name="AsistenciaServiceImpl" visibility="public">
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_CLIENT_REPO1" name="asistenciaRepository" visibility="private">
+          <type xmi:type="uml:PrimitiveType" href="http://www.omg.org/spec/UML/20131001/PrimitiveTypes.xmi#String"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_CLIENT_REPO2" name="sesionRepository" visibility="private">
+          <type xmi:type="uml:PrimitiveType" href="http://www.omg.org/spec/UML/20131001/PrimitiveTypes.xmi#String"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_CLIENT_FEIGN" name="academicoClient" visibility="private">
+          <type xmi:type="uml:PrimitiveType" href="http://www.omg.org/spec/UML/20131001/PrimitiveTypes.xmi#String"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_CLIENT_HANDLER" name="abstractHandler" visibility="private" type="EAID_CLS_ABSHANDLER"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_CLIENT_CONFIG" name="configurarCadenaResponsabilidad" visibility="public"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_CLIENT_REG" name="registrarAsistenciaQr" visibility="public">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_DTO" name="dto" direction="in"/>
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_RET" name="return" direction="return"/>
+        </ownedOperation>
+      </packagedElement>
+
+      <!-- Request: AsistenciaValidationContext -->
+      <packagedElement xmi:type="uml:Class" xmi:id="EAID_CLS_REQUEST" name="AsistenciaValidationContext" visibility="public">
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_REQ_1" name="registroEstudiante" visibility="private"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_REQ_2" name="codigoQr" visibility="private"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_REQ_3" name="observacion" visibility="private"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_REQ_4" name="fechaEvaluacion" visibility="private"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_REQ_5" name="horaEvaluacion" visibility="private"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_REQ_6" name="sesionClase" visibility="private"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_REQ_7" name="verificacionInscripcion" visibility="private"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_REQ_8" name="estadoAsistenciaCalculado" visibility="private"/>
+      </packagedElement>
+
+      <!-- AbstractHandler: AbstractAsistenciaHandler -->
+      <packagedElement xmi:type="uml:Class" xmi:id="EAID_CLS_ABSHANDLER" name="AbstractAsistenciaHandler" visibility="public" isAbstract="true">
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_ABS_SIG" name="siguiente" visibility="protected" aggregation="shared" type="EAID_CLS_ABSHANDLER"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_ABS_SET" name="setSiguiente" visibility="public">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_ABS_SET_IN" name="siguiente" type="EAID_CLS_ABSHANDLER" direction="in"/>
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_ABS_SET_RET" name="return" type="EAID_CLS_ABSHANDLER" direction="return"/>
+        </ownedOperation>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_ABS_HANDLE" name="handleRequest" visibility="public" isAbstract="true">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_ABS_REQ" name="request" type="EAID_CLS_REQUEST" direction="in"/>
+        </ownedOperation>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_ABS_NEXT" name="pasarAlSiguiente" visibility="protected">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_ABS_NEXT_REQ" name="request" type="EAID_CLS_REQUEST" direction="in"/>
+        </ownedOperation>
+      </packagedElement>
+
+      <!-- ConcreteHandler1: SesionActivaHandler -->
+      <packagedElement xmi:type="uml:Class" xmi:id="EAID_CLS_CH1" name="SesionActivaHandler" visibility="public">
+        <generalization xmi:type="uml:Generalization" xmi:id="EAID_GEN_CH1" general="EAID_CLS_ABSHANDLER"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_CH1_REPO" name="sesionRepository" visibility="private"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_CH1_HANDLE" name="handleRequest" visibility="public">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_CH1_REQ" name="request" type="EAID_CLS_REQUEST" direction="in"/>
+        </ownedOperation>
+      </packagedElement>
+
+      <!-- ConcreteHandler2: VigenciaQrHandler -->
+      <packagedElement xmi:type="uml:Class" xmi:id="EAID_CLS_CH2" name="VigenciaQrHandler" visibility="public">
+        <generalization xmi:type="uml:Generalization" xmi:id="EAID_GEN_CH2" general="EAID_CLS_ABSHANDLER"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_CH2_HANDLE" name="handleRequest" visibility="public">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_CH2_REQ" name="request" type="EAID_CLS_REQUEST" direction="in"/>
+        </ownedOperation>
+      </packagedElement>
+
+      <!-- ConcreteHandler3: DuplicidadAsistenciaHandler -->
+      <packagedElement xmi:type="uml:Class" xmi:id="EAID_CLS_CH3" name="DuplicidadAsistenciaHandler" visibility="public">
+        <generalization xmi:type="uml:Generalization" xmi:id="EAID_GEN_CH3" general="EAID_CLS_ABSHANDLER"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_CH3_REPO" name="asistenciaRepository" visibility="private"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_CH3_HANDLE" name="handleRequest" visibility="public">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_CH3_REQ" name="request" type="EAID_CLS_REQUEST" direction="in"/>
+        </ownedOperation>
+      </packagedElement>
+
+      <!-- ConcreteHandler4: InscripcionAcademicaHandler -->
+      <packagedElement xmi:type="uml:Class" xmi:id="EAID_CLS_CH4" name="InscripcionAcademicaHandler" visibility="public">
+        <generalization xmi:type="uml:Generalization" xmi:id="EAID_GEN_CH4" general="EAID_CLS_ABSHANDLER"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_CH4_FEIGN" name="academicoClient" visibility="private"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_CH4_HANDLE" name="handleRequest" visibility="public">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_CH4_REQ" name="request" type="EAID_CLS_REQUEST" direction="in"/>
+        </ownedOperation>
+      </packagedElement>
+
+      <!-- ConcreteHandler5: CalculoPuntualidadHandler -->
+      <packagedElement xmi:type="uml:Class" xmi:id="EAID_CLS_CH5" name="CalculoPuntualidadHandler" visibility="public">
+        <generalization xmi:type="uml:Generalization" xmi:id="EAID_GEN_CH5" general="EAID_CLS_ABSHANDLER"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_CH5_TOL" name="toleranciaMinutos" visibility="private"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_CH5_HANDLE" name="handleRequest" visibility="public">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_CH5_REQ" name="request" type="EAID_CLS_REQUEST" direction="in"/>
+        </ownedOperation>
+      </packagedElement>
+
+      <!-- Asociaciones CU07 -->
+      <packagedElement xmi:type="uml:Association" xmi:id="EAID_ASSOC_CLIENT_ABS">
+        <memberEnd xmi:idref="EAID_ATTR_CLIENT_HANDLER"/>
+        <ownedEnd xmi:type="uml:Property" xmi:id="EAID_END_CLIENT_ABS" visibility="private" type="EAID_CLS_CLIENT" association="EAID_ASSOC_CLIENT_ABS"/>
+      </packagedElement>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="EAID_ASSOC_SELF_ABS">
+        <memberEnd xmi:idref="EAID_ATTR_ABS_SIG"/>
+        <ownedEnd xmi:type="uml:Property" xmi:id="EAID_END_SELF_ABS" visibility="protected" type="EAID_CLS_ABSHANDLER" association="EAID_ASSOC_SELF_ABS"/>
+      </packagedElement>
+    </packagedElement>
+
+    <!-- ========================================================================= -->
+    <!-- PAQUETE 2: CU03 - GESTIONAR ESTUDIANTE (PATRON STRATEGY)                  -->
+    <!-- ========================================================================= -->
+    <packagedElement xmi:type="uml:Package" xmi:id="EAPK_CU03_STRAT" name="CU03_Gestionar_Estudiante_Strategy" visibility="public">
+
+      <!-- Servicio Cliente: ImportacionEstudiantesServiceImpl -->
+      <packagedElement xmi:type="uml:Class" xmi:id="EAID_CLS_IMPSVC" name="ImportacionEstudiantesServiceImpl" visibility="public">
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_IMP_CTX" name="contextoParser" visibility="private" type="EAID_CLS_CONTEXTO"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_IMP_EXEC" name="importarEstudiantesAGrupo" visibility="public"/>
+      </packagedElement>
+
+      <!-- Contexto: ContextoParserArchivo -->
+      <packagedElement xmi:type="uml:Class" xmi:id="EAID_CLS_CONTEXTO" name="ContextoParserArchivo" visibility="public">
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_CTX_EST" name="estrategia" visibility="private" aggregation="composite" type="EAID_INT_ESTRATEGIA"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="EAID_ATTR_CTX_LIST" name="estrategiasRegistradas" visibility="private"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_CTX_SET" name="setEstrategia" visibility="public">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_CTX_SET" name="estrategia" type="EAID_INT_ESTRATEGIA" direction="in"/>
+        </ownedOperation>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_CTX_EXEC" name="ejecutarOperacion" visibility="public">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_CTX_IN" name="inputStream" direction="in"/>
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_CTX_RET" name="return" direction="return"/>
+        </ownedOperation>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_CTX_SEL" name="seleccionarEstrategiaPorArchivo" visibility="public">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_CTX_NOM" name="nombreArchivo" direction="in"/>
+        </ownedOperation>
+      </packagedElement>
+
+      <!-- <<interface>> Estrategia_Abs: EstrategiaParserArchivo -->
+      <packagedElement xmi:type="uml:Interface" xmi:id="EAID_INT_ESTRATEGIA" name="EstrategiaParserArchivo" visibility="public">
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_INT_OPER" name="operacion" visibility="public" isAbstract="true">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_INT_IN" name="inputStream" direction="in"/>
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_INT_RET" name="return" direction="return"/>
+        </ownedOperation>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_INT_SOP" name="soportaArchivo" visibility="public" isAbstract="true">
+          <ownedParameter xmi:type="uml:Parameter" xmi:id="EAID_PAR_INT_NOM" name="nombreArchivo" direction="in"/>
+        </ownedOperation>
+      </packagedElement>
+
+      <!-- Concretec_A: ExcelParserConcreteStrategy -->
+      <packagedElement xmi:type="uml:Class" xmi:id="EAID_CLS_STRAT_EXCEL" name="ExcelParserConcreteStrategy" visibility="public">
+        <interfaceRealization xmi:type="uml:InterfaceRealization" xmi:id="EAID_REAL_EXCEL" client="EAID_CLS_STRAT_EXCEL" supplier="EAID_INT_ESTRATEGIA" contract="EAID_INT_ESTRATEGIA"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_EXCEL_OPER" name="operacion" visibility="public"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_EXCEL_SOP" name="soportaArchivo" visibility="public"/>
+      </packagedElement>
+
+      <!-- Concretec_B: PdfParserConcreteStrategy -->
+      <packagedElement xmi:type="uml:Class" xmi:id="EAID_CLS_STRAT_PDF" name="PdfParserConcreteStrategy" visibility="public">
+        <interfaceRealization xmi:type="uml:InterfaceRealization" xmi:id="EAID_REAL_PDF" client="EAID_CLS_STRAT_PDF" supplier="EAID_INT_ESTRATEGIA" contract="EAID_INT_ESTRATEGIA"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_PDF_OPER" name="operacion" visibility="public"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_PDF_SOP" name="soportaArchivo" visibility="public"/>
+      </packagedElement>
+
+      <!-- Concretec_N: CsvParserConcreteStrategy -->
+      <packagedElement xmi:type="uml:Class" xmi:id="EAID_CLS_STRAT_CSV" name="CsvParserConcreteStrategy" visibility="public">
+        <interfaceRealization xmi:type="uml:InterfaceRealization" xmi:id="EAID_REAL_CSV" client="EAID_CLS_STRAT_CSV" supplier="EAID_INT_ESTRATEGIA" contract="EAID_INT_ESTRATEGIA"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_CSV_OPER" name="operacion" visibility="public"/>
+        <ownedOperation xmi:type="uml:Operation" xmi:id="EAID_OP_CSV_SOP" name="soportaArchivo" visibility="public"/>
+      </packagedElement>
+
+      <!-- Asociacion Composicion Contexto -> Estrategia_Abs -->
+      <packagedElement xmi:type="uml:Association" xmi:id="EAID_ASSOC_CTX_STRAT">
+        <memberEnd xmi:idref="EAID_ATTR_CTX_EST"/>
+        <ownedEnd xmi:type="uml:Property" xmi:id="EAID_END_CTX_STRAT" visibility="private" type="EAID_CLS_CONTEXTO" association="EAID_ASSOC_CTX_STRAT"/>
+      </packagedElement>
+    </packagedElement>
+
+  </uml:Model>
+</xmi:XMI>

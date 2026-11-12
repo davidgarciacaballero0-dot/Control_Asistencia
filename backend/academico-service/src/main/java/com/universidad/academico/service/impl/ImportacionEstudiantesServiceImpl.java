@@ -11,7 +11,8 @@ import com.universidad.academico.repository.BoletaInscripcionRepository;
 import com.universidad.academico.repository.EstudianteRepository;
 import com.universidad.academico.repository.GrupoRepository;
 import com.universidad.academico.service.ImportacionEstudiantesService;
-import lombok.RequiredArgsConstructor;
+import com.universidad.academico.strategy.ContextoParserArchivo;
+import com.universidad.academico.strategy.util.NormalizadorCabecerasUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSName;
@@ -20,28 +21,18 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
-import org.apache.pdfbox.text.PDFTextStripper;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.DataFormatter;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -49,11 +40,10 @@ import java.util.Set;
 
 /**
  * Implementacion del servicio de importacion masiva de estudiantes (CSV / Excel / PDF).
- * Aplica Clean Architecture, desacoplamiento con auth-service via OpenFeign
- * y soporte para sincronizacion dinamica con baja logica y extraccion de fotografias.
+ * Aplica el patron de diseno Strategy a traves de ContextoParserArchivo y EstrategiaParserArchivo,
+ * eliminando la bifurcacion condicional if/else de formatos y respetando Clean Architecture y SOLID.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class ImportacionEstudiantesServiceImpl implements ImportacionEstudiantesService {
 
@@ -61,6 +51,34 @@ public class ImportacionEstudiantesServiceImpl implements ImportacionEstudiantes
     private final EstudianteRepository estudianteRepository;
     private final BoletaInscripcionRepository boletaRepository;
     private final AuthFeignClient authFeignClient;
+    private final ContextoParserArchivo contextoParser;
+
+    @Autowired
+    public ImportacionEstudiantesServiceImpl(
+            GrupoRepository grupoRepository,
+            EstudianteRepository estudianteRepository,
+            BoletaInscripcionRepository boletaRepository,
+            AuthFeignClient authFeignClient,
+            ContextoParserArchivo contextoParser
+    ) {
+        this.grupoRepository = grupoRepository;
+        this.estudianteRepository = estudianteRepository;
+        this.boletaRepository = boletaRepository;
+        this.authFeignClient = authFeignClient;
+        this.contextoParser = contextoParser;
+    }
+
+    /**
+     * Constructor secundario de compatibilidad para pruebas unitarias.
+     */
+    public ImportacionEstudiantesServiceImpl(
+            GrupoRepository grupoRepository,
+            EstudianteRepository estudianteRepository,
+            BoletaInscripcionRepository boletaRepository,
+            AuthFeignClient authFeignClient
+    ) {
+        this(grupoRepository, estudianteRepository, boletaRepository, authFeignClient, new ContextoParserArchivo());
+    }
 
     @Override
     @Transactional
@@ -96,17 +114,12 @@ public class ImportacionEstudiantesServiceImpl implements ImportacionEstudiantes
             log.error("Advertencia: No se pudieron extraer fotos del PDF: {}", e.getMessage());
         }
 
-        // 2. Parseo del archivo tabular de estudiantes
+        // 2. Parseo del archivo tabular de estudiantes delegando al Patron Strategy (ContextoParserArchivo)
         try {
-            if (nombreArchivo.endsWith(".xlsx") || nombreArchivo.endsWith(".xls")) {
-                filas = parsearExcel(archivo.getInputStream());
-            } else if (nombreArchivo.endsWith(".pdf")) {
-                filas = parsearPdf(archivo.getInputStream());
-            } else {
-                filas = parsearCsv(archivo.getInputStream());
-            }
+            contextoParser.seleccionarEstrategiaPorArchivo(nombreArchivo);
+            filas = contextoParser.ejecutarOperacion(archivo.getInputStream());
         } catch (Exception e) {
-            log.error("Error al parsear archivo de estudiantes", e);
+            log.error("Error al parsear archivo de estudiantes mediante ContextoParserArchivo", e);
             throw new IllegalArgumentException("Error al procesar el archivo: " + e.getMessage());
         }
 
@@ -158,7 +171,9 @@ public class ImportacionEstudiantesServiceImpl implements ImportacionEstudiantes
                             apellidos = partes[0] + " " + partes[1];
                             StringBuilder sbNombre = new StringBuilder();
                             for (int k = 2; k < partes.length; k++) {
-                                if (!sbNombre.isEmpty()) sbNombre.append(" ");
+                                if (!sbNombre.isEmpty()) {
+                                    sbNombre.append(" ");
+                                }
                                 sbNombre.append(partes[k]);
                             }
                             nombre = sbNombre.toString();
@@ -194,12 +209,9 @@ public class ImportacionEstudiantesServiceImpl implements ImportacionEstudiantes
                     correo = registro + "@universidad.edu";
                 }
 
-                // Generar contrasena inicial de acceso:
-                // Si viene CI, usar CI. Si no viene CI, Iniciales en mayusculas + Registro (ej: GCD217058795)
                 String contrasenaInicial = generarContrasenaInicial(apellidos, nombre, registro, ciOriginal);
                 String ciEstudiante = (!ciOriginal.isBlank()) ? ciOriginal : contrasenaInicial;
 
-                // Obtener foto en Base64 asociada por posicion secuencial
                 String fotoBase64 = null;
                 if (i < fotosBase64.size()) {
                     fotoBase64 = fotosBase64.get(i);
@@ -267,7 +279,7 @@ public class ImportacionEstudiantesServiceImpl implements ImportacionEstudiantes
                     inscritos++;
                 }
 
-                // 3. Aprovisionar credenciales en auth-service (Usuario = Registro, Contrasena = contrasenaInicial)
+                // 3. Aprovisionar credenciales en auth-service
                 try {
                     authFeignClient.provisionarUsuario(ProvisionarUsuarioRequest.builder()
                             .username(guardado.getRegistro())
@@ -345,7 +357,9 @@ public class ImportacionEstudiantesServiceImpl implements ImportacionEstudiantes
             try (PDDocument document = Loader.loadPDF(bytes)) {
                 for (PDPage page : document.getPages()) {
                     PDResources resources = page.getResources();
-                    if (resources == null) continue;
+                    if (resources == null) {
+                        continue;
+                    }
 
                     for (COSName xObjectName : resources.getXObjectNames()) {
                         PDXObject xObject = resources.getXObject(xObjectName);
@@ -367,221 +381,11 @@ public class ImportacionEstudiantesServiceImpl implements ImportacionEstudiantes
         return fotos;
     }
 
-    /**
-     * Parsea lineas tabulares de texto desde un archivo PDF oficial.
-     */
-    private List<Map<String, String>> parsearPdf(InputStream inputStream) throws Exception {
-        List<Map<String, String>> filas = new ArrayList<>();
-        byte[] bytes = inputStream.readAllBytes();
-        try (PDDocument document = Loader.loadPDF(bytes)) {
-            PDFTextStripper stripper = new PDFTextStripper();
-            String text = stripper.getText(document);
-            String[] lineas = text.split("\\r?\\n");
-            for (String linea : lineas) {
-                linea = linea.trim();
-                // Patrones tipicos: Nro Registro Apellidos_y_Nombres Carr Plan Tel/Cel Email
-                if (linea.matches("^\\d+\\s+\\d{7,10}\\s+.*")) {
-                    String[] partes = linea.split("\\s+");
-                    if (partes.length >= 6) {
-                        String registro = partes[1];
-                        String email = "";
-                        String telefono = "";
-                        String plan = "3";
-                        String carrera = "187";
-                        int indexFinNombre = partes.length - 1;
-
-                        if (partes[partes.length - 1].contains("@")) {
-                            email = partes[partes.length - 1];
-                            indexFinNombre--;
-                        }
-                        if (indexFinNombre >= 2 && partes[indexFinNombre].matches("\\d{7,10}")) {
-                            telefono = partes[indexFinNombre];
-                            indexFinNombre--;
-                        }
-                        if (indexFinNombre >= 2 && partes[indexFinNombre].matches("\\d+")) {
-                            plan = partes[indexFinNombre];
-                            indexFinNombre--;
-                        }
-                        if (indexFinNombre >= 2 && partes[indexFinNombre].matches("\\d+")) {
-                            carrera = partes[indexFinNombre];
-                            indexFinNombre--;
-                        }
-
-                        StringBuilder nombreCompleto = new StringBuilder();
-                        for (int k = 2; k <= indexFinNombre; k++) {
-                            if (!nombreCompleto.isEmpty()) nombreCompleto.append(" ");
-                            nombreCompleto.append(partes[k]);
-                        }
-
-                        Map<String, String> fila = new HashMap<>();
-                        fila.put("registro", registro);
-                        fila.put("apellidos_y_nombres", nombreCompleto.toString());
-                        fila.put("carrera", carrera);
-                        fila.put("plan", plan);
-                        fila.put("telefono", telefono);
-                        fila.put("email", email);
-                        filas.add(fila);
-                    }
-                }
-            }
-        }
-        return filas;
-    }
-
-    /**
-     * Parsea un archivo CSV delimitado por coma, punto y coma o tabulacion,
-     * soportando registros encapsulados con comillas dobles y escapado de Excel.
-     */
-    private List<Map<String, String>> parsearCsv(InputStream inputStream) throws Exception {
-        List<Map<String, String>> filas = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
-            String lineaCabecera = reader.readLine();
-            if (lineaCabecera == null) return filas;
-
-            // Manejo de BOM UTF-8
-            if (lineaCabecera.startsWith("\uFEFF")) {
-                lineaCabecera = lineaCabecera.substring(1);
-            }
-
-            lineaCabecera = desescaparLineaCsvSiEsNecesario(lineaCabecera);
-
-            // Detectar delimitador
-            String delimitador = ",";
-            if (lineaCabecera.contains(";")) {
-                delimitador = ";";
-            } else if (lineaCabecera.contains("\t")) {
-                delimitador = "\t";
-            }
-
-            List<String> cabecerasRaw = dividirLineaCsv(lineaCabecera, delimitador);
-            String[] cabeceras = normalizarCabeceras(cabecerasRaw.toArray(new String[0]));
-
-            String linea;
-            while ((linea = reader.readLine()) != null) {
-                if (linea.trim().isEmpty()) continue;
-                linea = desescaparLineaCsvSiEsNecesario(linea);
-                List<String> valores = dividirLineaCsv(linea, delimitador);
-                Map<String, String> fila = new HashMap<>();
-                for (int i = 0; i < cabeceras.length && i < valores.size(); i++) {
-                    fila.put(cabeceras[i], limpiarValor(valores.get(i)));
-                }
-                filas.add(fila);
-            }
-        }
-        return filas;
-    }
-
-    /**
-     * Desescapa lineas que provienen de exportaciones de Excel donde la fila entera
-     * fue encapsulada entre comillas dobles y las comillas internas fueron duplicadas.
-     */
-    private String desescaparLineaCsvSiEsNecesario(String linea) {
-        if (linea == null) return "";
-        String l = linea.trim();
-        if (l.startsWith("\"") && l.endsWith("\"") && l.contains("\"\"")) {
-            l = l.substring(1, l.length() - 1);
-            l = l.replace("\"\"", "\"");
-        }
-        return l;
-    }
-
-    /**
-     * Divide una linea CSV respetando comillas y delimitadores.
-     */
-    private List<String> dividirLineaCsv(String linea, String delimitador) {
-        List<String> resultado = new ArrayList<>();
-        char delim = delimitador.charAt(0);
-        StringBuilder actual = new StringBuilder();
-        boolean enComillas = false;
-
-        for (int i = 0; i < linea.length(); i++) {
-            char c = linea.charAt(i);
-            if (c == '\"') {
-                enComillas = !enComillas;
-            } else if (c == delim && !enComillas) {
-                resultado.add(actual.toString());
-                actual.setLength(0);
-                continue;
-            }
-            actual.append(c);
-        }
-        resultado.add(actual.toString());
-        return resultado;
-    }
-
-    /**
-     * Remueve comillas circundantes y espacios en blanco de un valor de celda.
-     */
-    private String limpiarValor(String val) {
-        if (val == null) return "";
-        String s = val.trim();
-        while (s.startsWith("\"") && s.endsWith("\"") && s.length() >= 2) {
-            s = s.substring(1, s.length() - 1).trim();
-        }
-        return s;
-    }
-
-    /**
-     * Parsea un libro Excel (.xlsx o .xls) usando Apache POI.
-     */
-    private List<Map<String, String>> parsearExcel(InputStream inputStream) throws Exception {
-        List<Map<String, String>> filas = new ArrayList<>();
-        DataFormatter formatter = new DataFormatter();
-
-        try (Workbook workbook = WorkbookFactory.create(inputStream)) {
-            Sheet sheet = workbook.getSheetAt(0);
-            if (sheet == null || sheet.getPhysicalNumberOfRows() == 0) {
-                return filas;
-            }
-
-            Row headerRow = sheet.getRow(0);
-            if (headerRow == null) return filas;
-
-            List<String> cabecerasList = new ArrayList<>();
-            for (Cell cell : headerRow) {
-                cabecerasList.add(formatter.formatCellValue(cell).trim());
-            }
-
-            String[] cabeceras = normalizarCabeceras(cabecerasList.toArray(new String[0]));
-
-            for (int r = 1; r <= sheet.getLastRowNum(); r++) {
-                Row row = sheet.getRow(r);
-                if (row == null) continue;
-
-                Map<String, String> fila = new HashMap<>();
-                boolean tieneContenido = false;
-
-                for (int c = 0; c < cabeceras.length; c++) {
-                    Cell cell = row.getCell(c);
-                    String valor = (cell != null) ? formatter.formatCellValue(cell).trim() : "";
-                    if (!valor.isEmpty()) tieneContenido = true;
-                    fila.put(cabeceras[c], valor);
-                }
-
-                if (tieneContenido) {
-                    filas.add(fila);
-                }
-            }
-        }
-        return filas;
-    }
-
-    private String[] normalizarCabeceras(String[] raw) {
-        String[] normalizadas = new String[raw.length];
-        for (int i = 0; i < raw.length; i++) {
-            String col = raw[i].trim().toLowerCase()
-                    .replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
-                    .replace("ñ", "n").replace(" ", "_").replaceAll("[^a-z0-9_]", "");
-            normalizadas[i] = col;
-        }
-        return normalizadas;
-    }
-
     private String obtenerValor(Map<String, String> fila, String... llaves) {
         for (String llave : llaves) {
             String val = fila.get(llave);
             if (val != null && !val.trim().isEmpty()) {
-                return limpiarValor(val);
+                return NormalizadorCabecerasUtil.limpiarValor(val);
             }
         }
         return "";
@@ -589,9 +393,6 @@ public class ImportacionEstudiantesServiceImpl implements ImportacionEstudiantes
 
     /**
      * Genera la contrasena inicial de acceso para el estudiante.
-     * Si el archivo incluye CI, se utiliza el CI directamente.
-     * Si no incluye CI, se genera combinando las iniciales del nombre completo en mayusculas
-     * con el numero de registro academico (Ejemplo: GARCIA CABALLERO DAVID con registro 217058795 -> GCD217058795).
      */
     private String generarContrasenaInicial(String apellidos, String nombre, String registro, String ci) {
         if (ci != null && !ci.trim().isEmpty()) {

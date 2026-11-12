@@ -4,11 +4,8 @@ import com.universidad.academico.domain.BoletaInscripcion;
 import com.universidad.academico.domain.DiaSemana;
 import com.universidad.academico.domain.Estudiante;
 import com.universidad.academico.domain.Grupo;
-import com.universidad.academico.domain.Horario;
 import com.universidad.academico.dto.BoletaInscripcionDto;
-import com.universidad.academico.dto.ClaseHorarioDto;
 import com.universidad.academico.dto.GrupoDto;
-import com.universidad.academico.dto.HorarioDto;
 import com.universidad.academico.dto.MateriaInscritaDto;
 import com.universidad.academico.dto.VerificacionInscripcionDto;
 import com.universidad.academico.repository.BoletaInscripcionRepository;
@@ -40,12 +37,27 @@ public class BoletaInscripcionServiceImpl implements BoletaInscripcionService {
     @Transactional
     public BoletaInscripcionDto inscribirEstudiante(BoletaInscripcionDto dto) {
         Estudiante estudiante = estudianteRepository.findById(dto.getEstudianteRegistro())
-                .orElseThrow(() -> new IllegalArgumentException("Estudiante no encontrado con registro: " + dto.getEstudianteRegistro()));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Estudiante no encontrado con registro: " + dto.getEstudianteRegistro()));
 
         Set<Grupo> grupos = new HashSet<>();
         for (Long grupoId : dto.getGrupoIds()) {
             Grupo grupo = grupoRepository.findById(grupoId)
                     .orElseThrow(() -> new IllegalArgumentException("Grupo no encontrado con ID: " + grupoId));
+
+            // 1. Validar que el estudiante no este ya inscrito en el mismo grupo
+            if (boletaRepository.estaEstudianteInscritoEnGrupo(estudiante.getRegistro(), grupoId)) {
+                throw new IllegalStateException(
+                        "El estudiante " + estudiante.getRegistro() + " ya se encuentra inscrito en el grupo " + grupo.getNombre());
+            }
+
+            // 2. Validar que el grupo cuente con cupo disponible
+            long inscritosActuales = boletaRepository.countEstudiantesByGrupoId(grupoId);
+            if (grupo.getCupo() != null && inscritosActuales >= grupo.getCupo()) {
+                throw new IllegalStateException(
+                        "El grupo " + grupo.getNombre() + " ha alcanzado su cupo maximo de " + grupo.getCupo() + " estudiantes");
+            }
+
             grupos.add(grupo);
         }
 

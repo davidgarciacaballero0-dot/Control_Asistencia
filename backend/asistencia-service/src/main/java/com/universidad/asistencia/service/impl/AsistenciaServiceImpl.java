@@ -1,10 +1,16 @@
 package com.universidad.asistencia.service.impl;
 
+import com.universidad.asistencia.chain.AbstractAsistenciaHandler;
+import com.universidad.asistencia.chain.AsistenciaValidationContext;
+import com.universidad.asistencia.chain.handler.CalculoPuntualidadHandler;
+import com.universidad.asistencia.chain.handler.DuplicidadAsistenciaHandler;
+import com.universidad.asistencia.chain.handler.InscripcionAcademicaHandler;
+import com.universidad.asistencia.chain.handler.SesionActivaHandler;
+import com.universidad.asistencia.chain.handler.VigenciaQrHandler;
 import com.universidad.asistencia.client.AcademicoFeignClient;
 import com.universidad.asistencia.client.dto.VerificacionInscripcionResponse;
 import com.universidad.asistencia.domain.Asistencia;
 import com.universidad.asistencia.domain.EstadoAsistencia;
-import com.universidad.asistencia.domain.EstadoSesion;
 import com.universidad.asistencia.domain.MetodoValidacion;
 import com.universidad.asistencia.domain.SesionClase;
 import com.universidad.asistencia.dto.AsistenciaResponseDto;
@@ -13,23 +19,22 @@ import com.universidad.asistencia.dto.ReporteAsistenciaDto;
 import com.universidad.asistencia.repository.AsistenciaRepository;
 import com.universidad.asistencia.repository.SesionClaseRepository;
 import com.universidad.asistencia.service.AsistenciaService;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
 /**
  * Implementacion de la logica de negocio de Asistencia (CU07).
- * Aplica principios de Alta Cohesion y Bajo Acoplamiento mediante comunicacion OpenFeign.
+ * Actua como el Client del patron de diseno Chain of Responsibility,
+ * delegando la cadena de validaciones de negocio a la jerarquia AbstractAsistenciaHandler.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AsistenciaServiceImpl implements AsistenciaService {
 
@@ -37,53 +42,122 @@ public class AsistenciaServiceImpl implements AsistenciaService {
     private final SesionClaseRepository sesionRepository;
     private final AcademicoFeignClient academicoClient;
 
+    private final SesionActivaHandler sesionActivaHandler;
+    private final VigenciaQrHandler vigenciaQrHandler;
+    private final DuplicidadAsistenciaHandler duplicidadAsistenciaHandler;
+    private final InscripcionAcademicaHandler inscripcionAcademicaHandler;
+    private final CalculoPuntualidadHandler calculoPuntualidadHandler;
+
+    /**
+     * Referencia directa del Client hacia AbstractHandler segun el diagrama de referencia.
+     */
+    private AbstractAsistenciaHandler abstractHandler;
+
+    /**
+     * Constructor principal utilizado por Spring IoC para inyectar todos los componentes.
+     */
+    @Autowired
+    public AsistenciaServiceImpl(
+            AsistenciaRepository asistenciaRepository,
+            SesionClaseRepository sesionRepository,
+            AcademicoFeignClient academicoClient,
+            SesionActivaHandler sesionActivaHandler,
+            VigenciaQrHandler vigenciaQrHandler,
+            DuplicidadAsistenciaHandler duplicidadAsistenciaHandler,
+            InscripcionAcademicaHandler inscripcionAcademicaHandler,
+            CalculoPuntualidadHandler calculoPuntualidadHandler
+    ) {
+        this.asistenciaRepository = asistenciaRepository;
+        this.sesionRepository = sesionRepository;
+        this.academicoClient = academicoClient;
+        this.sesionActivaHandler = sesionActivaHandler;
+        this.vigenciaQrHandler = vigenciaQrHandler;
+        this.duplicidadAsistenciaHandler = duplicidadAsistenciaHandler;
+        this.inscripcionAcademicaHandler = inscripcionAcademicaHandler;
+        this.calculoPuntualidadHandler = calculoPuntualidadHandler;
+        configurarCadenaResponsabilidad();
+    }
+
+    /**
+     * Constructor secundario de compatibilidad para pruebas unitarias aisladas con mocks basicos.
+     */
+    public AsistenciaServiceImpl(
+            AsistenciaRepository asistenciaRepository,
+            SesionClaseRepository sesionRepository,
+            AcademicoFeignClient academicoClient
+    ) {
+        this(
+                asistenciaRepository,
+                sesionRepository,
+                academicoClient,
+                new SesionActivaHandler(sesionRepository),
+                new VigenciaQrHandler(),
+                new DuplicidadAsistenciaHandler(asistenciaRepository),
+                new InscripcionAcademicaHandler(academicoClient),
+                new CalculoPuntualidadHandler()
+        );
+    }
+
+    /**
+     * Ensambla la cadena de responsabilidad enlazando secuencialmente los ConcreteHandlers.
+     */
+    @PostConstruct
+    public final void configurarCadenaResponsabilidad() {
+        AbstractAsistenciaHandler h1 = this.sesionActivaHandler != null
+                ? this.sesionActivaHandler
+                : new SesionActivaHandler(this.sesionRepository);
+        AbstractAsistenciaHandler h2 = this.vigenciaQrHandler != null
+                ? this.vigenciaQrHandler
+                : new VigenciaQrHandler();
+        AbstractAsistenciaHandler h3 = this.duplicidadAsistenciaHandler != null
+                ? this.duplicidadAsistenciaHandler
+                : new DuplicidadAsistenciaHandler(this.asistenciaRepository);
+        AbstractAsistenciaHandler h4 = this.inscripcionAcademicaHandler != null
+                ? this.inscripcionAcademicaHandler
+                : new InscripcionAcademicaHandler(this.academicoClient);
+        AbstractAsistenciaHandler h5 = this.calculoPuntualidadHandler != null
+                ? this.calculoPuntualidadHandler
+                : new CalculoPuntualidadHandler();
+
+        h1.setSiguiente(h2)
+          .setSiguiente(h3)
+          .setSiguiente(h4)
+          .setSiguiente(h5);
+
+        this.abstractHandler = h1;
+    }
+
     @Override
     @Transactional
     public AsistenciaResponseDto registrarAsistenciaQr(MarcarAsistenciaQrDto dto) {
         log.info("Procesando registro de asistencia QR para estudiante: {}, con codigo: {}",
                 dto.getRegistroEstudiante(), dto.getCodigoQr());
 
-        // 1. Validar existencia y estado de la sesion por su codigo QR
-        SesionClase sesion = sesionRepository.findByCodigoQrGenerado(dto.getCodigoQr())
-                .orElseThrow(() -> new IllegalArgumentException("El codigo QR escaneado no corresponde a ninguna sesion valida"));
-
-        if (sesion.getEstado() != EstadoSesion.ACTIVA) {
-            throw new IllegalStateException("La sesion de clase se encuentra " + sesion.getEstado() + ". No es posible registrar asistencia");
+        if (this.abstractHandler == null) {
+            configurarCadenaResponsabilidad();
         }
 
-        // 2. Validar vigencia temporal del QR
-        if (sesion.getExpiracionQr() != null && LocalDateTime.now().isAfter(sesion.getExpiracionQr())) {
-            throw new IllegalStateException("El codigo QR ha expirado. Solicite al docente que regenere el codigo");
-        }
+        // 1. Construir el objeto Request (AsistenciaValidationContext) para la cadena
+        AsistenciaValidationContext requestContext = AsistenciaValidationContext.builder()
+                .registroEstudiante(dto.getRegistroEstudiante())
+                .codigoQr(dto.getCodigoQr())
+                .observacion(dto.getObservacion())
+                .fechaEvaluacion(LocalDate.now())
+                .horaEvaluacion(LocalTime.now())
+                .build();
 
-        // 3. Validar duplicidad (evitar que el mismo estudiante marque dos veces en la misma sesion)
-        if (asistenciaRepository.existsBySesionClaseIdAndRegistroEstudiante(sesion.getId(), dto.getRegistroEstudiante())) {
-            throw new IllegalStateException("El estudiante con registro " + dto.getRegistroEstudiante() + " ya tiene registrada su asistencia en esta sesion");
-        }
+        // 2. Ejecutar la cadena de responsabilidad invocando handleRequest(request)
+        this.abstractHandler.handleRequest(requestContext);
 
-        // 4. Invocacion a microservicio academico mediante OpenFeign para verificar inscripcion
-        VerificacionInscripcionResponse verificacion;
-        try {
-            verificacion = academicoClient.verificarInscripcion(dto.getRegistroEstudiante(), sesion.getIdGrupoReferencia());
-        } catch (Exception e) {
-            log.error("Error al comunicarse con el microservicio academico a traves de OpenFeign: {}", e.getMessage());
-            throw new IllegalStateException("No se pudo verificar la inscripcion academica. Servicio academico no disponible");
-        }
+        // 3. Extraer resultados validados y enriquecidos por los ConcreteHandlers
+        SesionClase sesion = requestContext.getSesionClase();
+        VerificacionInscripcionResponse verificacion = requestContext.getVerificacionInscripcion();
+        EstadoAsistencia estadoAsistencia = requestContext.getEstadoAsistenciaCalculado();
 
-        if (verificacion == null || !verificacion.isInscrito()) {
-            String motivo = verificacion != null ? verificacion.getMensaje() : "Inscripcion no valida";
-            throw new IllegalArgumentException("No se puede registrar asistencia: " + motivo);
-        }
-
-        // 5. Determinar estado de asistencia (PRESENTE o ATRASO segun tolerancia de 15 minutos)
-        LocalTime ahora = LocalTime.now();
-        long minutosTranscurridos = Duration.between(sesion.getHoraInicio(), ahora).toMinutes();
-        EstadoAsistencia estadoAsistencia = (minutosTranscurridos <= 15) ? EstadoAsistencia.PRESENTE : EstadoAsistencia.ATRASO;
-
-        // 6. Persistir el registro de asistencia en la base de datos db_asistencia
+        // 4. Persistir el registro de asistencia en la base de datos db_asistencia
         Asistencia asistencia = Asistencia.builder()
-                .fechaRegistro(LocalDate.now())
-                .horaRegistro(ahora)
+                .fechaRegistro(requestContext.getFechaEvaluacion())
+                .horaRegistro(requestContext.getHoraEvaluacion())
                 .metodoValidacion(MetodoValidacion.QR)
                 .registroEstudiante(dto.getRegistroEstudiante())
                 .nombreEstudiante(verificacion.getNombreEstudiante())
@@ -95,21 +169,7 @@ public class AsistenciaServiceImpl implements AsistenciaService {
         Asistencia guardada = asistenciaRepository.save(asistencia);
         log.info("Asistencia registrada exitosamente con ID: {}, Estado: {}", guardada.getId(), estadoAsistencia);
 
-        return AsistenciaResponseDto.builder()
-                .id(guardada.getId())
-                .fechaRegistro(guardada.getFechaRegistro())
-                .horaRegistro(guardada.getHoraRegistro())
-                .metodoValidacion(guardada.getMetodoValidacion())
-                .registroEstudiante(guardada.getRegistroEstudiante())
-                .nombreEstudiante(guardada.getNombreEstudiante())
-                .sesionId(sesion.getId())
-                .grupoId(sesion.getIdGrupoReferencia())
-                .grupoNombre(verificacion.getGrupoNombre())
-                .materiaSigla(verificacion.getMateriaSigla())
-                .materiaNombre(verificacion.getMateriaNombre())
-                .estadoAsistencia(guardada.getEstadoAsistencia())
-                .mensaje("Asistencia registrada exitosamente como " + guardada.getEstadoAsistencia())
-                .build();
+        return mapearADtoConContextoAcademico(guardada, sesion, verificacion);
     }
 
     @Override
@@ -150,6 +210,28 @@ public class AsistenciaServiceImpl implements AsistenciaService {
                 .totalAtrasos(totalAtrasos)
                 .totalRegistrados(asistencias.size())
                 .detalleAsistencias(detalles)
+                .build();
+    }
+
+    private AsistenciaResponseDto mapearADtoConContextoAcademico(
+            Asistencia guardada,
+            SesionClase sesion,
+            VerificacionInscripcionResponse verificacion
+    ) {
+        return AsistenciaResponseDto.builder()
+                .id(guardada.getId())
+                .fechaRegistro(guardada.getFechaRegistro())
+                .horaRegistro(guardada.getHoraRegistro())
+                .metodoValidacion(guardada.getMetodoValidacion())
+                .registroEstudiante(guardada.getRegistroEstudiante())
+                .nombreEstudiante(guardada.getNombreEstudiante())
+                .sesionId(sesion.getId())
+                .grupoId(sesion.getIdGrupoReferencia())
+                .grupoNombre(verificacion != null ? verificacion.getGrupoNombre() : null)
+                .materiaSigla(verificacion != null ? verificacion.getMateriaSigla() : null)
+                .materiaNombre(verificacion != null ? verificacion.getMateriaNombre() : null)
+                .estadoAsistencia(guardada.getEstadoAsistencia())
+                .mensaje("Asistencia registrada exitosamente como " + guardada.getEstadoAsistencia())
                 .build();
     }
 

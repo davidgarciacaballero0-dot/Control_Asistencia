@@ -23,5 +23,5 @@ public class RouteValidator {
 
     public Predicate<ServerHttpRequest> esProtegida =
             request -> ENDPOINTS_ABIERTOS.stream()
-                    .noneMatch(uri -> request.getURI().getPath().contains(uri));
+                    .noneMatch(uri -> request.getURI().getPath().startsWith(uri));
 }

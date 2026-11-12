@@ -31,12 +31,16 @@ public class SesionClaseServiceImpl implements SesionClaseService {
     @Transactional
     public SesionClaseDto iniciarSesion(IniciarSesionDto dto) {
         // Regla de Negocio: Un docente y un grupo academico solo pueden tener 1 sesion ACTIVA a la vez.
-        // Auto-finalizar cualquier sesion previa que hubiera quedado abierta.
-        List<SesionClase> activasPrevias = sesionRepository.findAll().stream()
-                .filter(s -> s.getEstado() == EstadoSesion.ACTIVA &&
-                        (s.getCodigoDocenteReferencia().equalsIgnoreCase(dto.getCodigoDocenteReferencia()) ||
-                         s.getIdGrupoReferencia().equals(dto.getIdGrupoReferencia())))
-                .toList();
+        // Auto-finalizar cualquier sesion previa que hubiera quedado abierta usando consulta optimizada y null-safe.
+        String codigoDocente = (dto.getCodigoDocenteReferencia() != null && !dto.getCodigoDocenteReferencia().isBlank())
+                ? dto.getCodigoDocenteReferencia().trim()
+                : null;
+
+        List<SesionClase> activasPrevias = sesionRepository.findSesionesPorEstadoYDocenteOGrupo(
+                EstadoSesion.ACTIVA,
+                codigoDocente,
+                dto.getIdGrupoReferencia()
+        );
 
         for (SesionClase prev : activasPrevias) {
             prev.setEstado(EstadoSesion.FINALIZADA);
@@ -61,7 +65,7 @@ public class SesionClaseServiceImpl implements SesionClaseService {
                 .estado(EstadoSesion.ACTIVA)
                 .idHorarioReferencia(dto.getIdHorarioReferencia())
                 .idGrupoReferencia(dto.getIdGrupoReferencia())
-                .codigoDocenteReferencia(dto.getCodigoDocenteReferencia())
+                .codigoDocenteReferencia(codigoDocente)
                 .tema(dto.getTema() != null ? dto.getTema() : "Clase Regular")
                 .codigoQrGenerado(codigoQr)
                 .expiracionQr(expiracion)
@@ -144,9 +148,7 @@ public class SesionClaseServiceImpl implements SesionClaseService {
     @Override
     @Transactional(readOnly = true)
     public List<SesionClaseDto> listarActivas() {
-        return sesionRepository.findAll().stream()
-                .filter(s -> s.getEstado() == EstadoSesion.ACTIVA)
-                .sorted((s1, s2) -> s2.getId().compareTo(s1.getId()))
+        return sesionRepository.findByEstadoOrderByIdDesc(EstadoSesion.ACTIVA).stream()
                 .map(this::mapearADto)
                 .toList();
     }

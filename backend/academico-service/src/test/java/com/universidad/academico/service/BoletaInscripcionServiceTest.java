@@ -4,6 +4,7 @@ import com.universidad.academico.domain.Docente;
 import com.universidad.academico.domain.Estudiante;
 import com.universidad.academico.domain.Grupo;
 import com.universidad.academico.domain.Materia;
+import com.universidad.academico.dto.BoletaInscripcionDto;
 import com.universidad.academico.dto.VerificacionInscripcionDto;
 import com.universidad.academico.repository.BoletaInscripcionRepository;
 import com.universidad.academico.repository.EstudianteRepository;
@@ -18,12 +19,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 /**
- * Pruebas unitarias para la logica de negocio de verificacion de inscripciones en academico-service.
+ * Pruebas unitarias para la logica de negocio de verificacion e inscripcion de boletas en academico-service.
  */
 @ExtendWith(MockitoExtension.class)
 public class BoletaInscripcionServiceTest {
@@ -92,5 +94,27 @@ public class BoletaInscripcionServiceTest {
 
         assertFalse(resultado.isInscrito());
         assertEquals("El estudiante no se encuentra inscrito en este grupo academico", resultado.getMensaje());
+    }
+
+    @Test
+    @DisplayName("Debe rechazar la inscripcion cuando el grupo ya alcanzo su cupo maximo")
+    void inscribirEstudiante_GrupoSinCupo_LanzaIllegalStateException() {
+        grupoPrueba.setCupo(30);
+        BoletaInscripcionDto dto = BoletaInscripcionDto.builder()
+                .estudianteRegistro("2024001")
+                .gestion("2-2026")
+                .grupoIds(Set.of(1L))
+                .build();
+
+        when(estudianteRepository.findById("2024001")).thenReturn(Optional.of(estudiantePrueba));
+        when(grupoRepository.findById(1L)).thenReturn(Optional.of(grupoPrueba));
+        when(boletaRepository.estaEstudianteInscritoEnGrupo("2024001", 1L)).thenReturn(false);
+        when(boletaRepository.countEstudiantesByGrupoId(1L)).thenReturn(30L);
+
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class,
+                () -> boletaService.inscribirEstudiante(dto)
+        );
+        assertTrue(ex.getMessage().contains("cupo maximo"));
     }
 }

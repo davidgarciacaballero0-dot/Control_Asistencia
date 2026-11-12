@@ -41,4 +41,14 @@ public class ErrorResponseDto {
      * Ruta o URI del endpoint que origino la excepcion.
      */
     private String ruta;
+
+    /**
+     * Propiedad de compatibilidad para clientes frontend (React/Axios y Flutter)
+     * que consultan err.response.data.message.
+     *
+     * @return El mismo texto contenido en mensaje.
+     */
+    public String getMessage() {
+        return this.mensaje;
+    }
 }

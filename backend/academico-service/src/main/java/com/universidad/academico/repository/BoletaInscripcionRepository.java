@@ -36,6 +36,15 @@ public interface BoletaInscripcionRepository extends JpaRepository<BoletaInscrip
     );
 
     /**
+     * Cuenta la cantidad de estudiantes unicos actualmente inscritos en un grupo academico.
+     *
+     * @param grupoId ID del grupo.
+     * @return Cantidad de estudiantes inscritos en el grupo.
+     */
+    @Query("SELECT COUNT(DISTINCT b.estudiante.registro) FROM BoletaInscripcion b JOIN b.grupos g WHERE g.id = :grupoId")
+    long countEstudiantesByGrupoId(@Param("grupoId") Long grupoId);
+
+    /**
      * Obtiene la lista de estudiantes unicos inscritos en un grupo determinado.
      *
      * @param grupoId ID del grupo.

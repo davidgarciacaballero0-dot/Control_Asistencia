@@ -126,6 +126,12 @@ public class AuthServiceImpl implements AuthService {
             // Limpiar prefijo Bearer si viene incluido
             String tokenLimpio = token.startsWith("Bearer ") ? token.substring(7) : token;
             Claims claims = jwtService.extraerTodosLosClaims(tokenLimpio);
+            if (claims.getExpiration() != null && claims.getExpiration().before(new java.util.Date())) {
+                return TokenValidationResponseDto.builder()
+                        .valid(false)
+                        .mensaje("Token expirado")
+                        .build();
+            }
             String username = claims.getSubject();
 
             @SuppressWarnings("unchecked")
